@@ -4,7 +4,7 @@ export const $lib = createTypeSpecLibrary({
   name: "@kattebak/typespec-drizzle-orm-generator",
   diagnostics: {},
   state: {
-    entity: { description: "State for @entity decorator" },
+    table: { description: "State for @table decorator" },
     primaryKey: { description: "State for @primaryKey decorator" },
     pk: { description: "State for @pk decorator (marks PK columns)" },
     references: { description: "State for @references decorator" },

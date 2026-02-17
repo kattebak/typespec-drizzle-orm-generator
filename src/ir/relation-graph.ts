@@ -1,13 +1,13 @@
 import { toTableVariableName } from "../generators/naming.ts";
-import type { EntityDef } from "./types.ts";
+import type { TableDef } from "./types.ts";
 
 /** A one-to-one or many-to-one relation (FK holder side) */
 export interface OneRelation {
   kind: "one";
   name: string;
-  fromEntity: string;
+  fromTable: string;
   fromField: string;
-  toEntity: string;
+  toTable: string;
   toField: string;
   optional: boolean;
 }
@@ -16,19 +16,19 @@ export interface OneRelation {
 export interface ManyRelation {
   kind: "many";
   name: string;
-  entity: string;
+  table: string;
 }
 
 /** A many-to-many through junction relation */
 export interface ManyThroughRelation {
   kind: "many-through";
   name: string;
-  fromEntity: string;
+  fromTable: string;
   fromField: string;
-  toEntity: string;
+  toTable: string;
   toField: string;
   junction: {
-    entity: string;
+    table: string;
     fromField: string;
     toField: string;
   };
@@ -36,7 +36,7 @@ export interface ManyThroughRelation {
 
 export type Relation = OneRelation | ManyRelation | ManyThroughRelation;
 
-/** Complete relation graph: entity name -> its relations */
+/** Complete relation graph: table name -> its relations */
 export type RelationGraph = Map<string, Relation[]>;
 
 /** Strip "Id" suffix from a field name to derive a one-relation name */
@@ -48,55 +48,55 @@ export function deriveOneRelationName(fieldName: string): string {
 }
 
 /**
- * Builds a bidirectional relation graph from entity definitions.
+ * Builds a bidirectional relation graph from table definitions.
  *
  * Algorithm (from RFC "Relation Derivation Algorithm"):
- * 1. For each entity, collect @references fields → OneRelation + ManyRelation (reverse)
- * 2. For each @junction entity, create ManyThroughRelation on both sides
- * 3. Return Map<entityName, Relation[]>
+ * 1. For each table, collect @references fields → OneRelation + ManyRelation (reverse)
+ * 2. For each @junction table, create ManyThroughRelation on both sides
+ * 3. Return Map<tableName, Relation[]>
  */
-export function buildRelationGraph(entities: EntityDef[]): RelationGraph {
+export function buildRelationGraph(tables: TableDef[]): RelationGraph {
   const graph: RelationGraph = new Map();
 
-  for (const entity of entities) {
-    graph.set(entity.name, []);
+  for (const table of tables) {
+    graph.set(table.name, []);
   }
 
   // Step 1: Process @references fields
-  for (const entity of entities) {
-    for (const field of entity.fields) {
+  for (const table of tables) {
+    for (const field of table.fields) {
       if (!field.references) continue;
 
       const ref = field.references;
 
       // "one" relation on the FK holder side
-      graph.get(entity.name)?.push({
+      graph.get(table.name)?.push({
         kind: "one",
         name: deriveOneRelationName(field.name),
-        fromEntity: entity.name,
+        fromTable: table.name,
         fromField: field.name,
-        toEntity: ref.entityName,
+        toTable: ref.tableName,
         toField: ref.fieldName,
         optional: field.nullable,
       });
 
       // "many" reverse on the target side — skip if FK holder is a junction
       // (junction FKs produce many-through instead of many reverses)
-      if (!entity.isJunction) {
-        graph.get(ref.entityName)?.push({
+      if (!table.isJunction) {
+        graph.get(ref.tableName)?.push({
           kind: "many",
-          name: toTableVariableName(entity.name),
-          entity: entity.name,
+          name: toTableVariableName(table.name),
+          table: table.name,
         });
       }
     }
   }
 
-  // Step 2: Process @junction entities → many-through on both sides
-  for (const entity of entities) {
-    if (!entity.isJunction) continue;
+  // Step 2: Process @junction tables → many-through on both sides
+  for (const table of tables) {
+    if (!table.isJunction) continue;
 
-    const refFields = entity.fields.filter((f) => f.references);
+    const refFields = table.fields.filter((f) => f.references);
     if (refFields.length !== 2) continue;
 
     const [fieldA, fieldB] = refFields;
@@ -106,30 +106,30 @@ export function buildRelationGraph(entities: EntityDef[]): RelationGraph {
     if (!refA || !refB) continue;
 
     // Side A gets many-through to Side B
-    graph.get(refA.entityName)?.push({
+    graph.get(refA.tableName)?.push({
       kind: "many-through",
-      name: toTableVariableName(refB.entityName),
-      fromEntity: refA.entityName,
+      name: toTableVariableName(refB.tableName),
+      fromTable: refA.tableName,
       fromField: refA.fieldName,
-      toEntity: refB.entityName,
+      toTable: refB.tableName,
       toField: refB.fieldName,
       junction: {
-        entity: entity.name,
+        table: table.name,
         fromField: fieldA.name,
         toField: fieldB.name,
       },
     });
 
     // Side B gets many-through to Side A
-    graph.get(refB.entityName)?.push({
+    graph.get(refB.tableName)?.push({
       kind: "many-through",
-      name: toTableVariableName(refA.entityName),
-      fromEntity: refB.entityName,
+      name: toTableVariableName(refA.tableName),
+      fromTable: refB.tableName,
       fromField: refB.fieldName,
-      toEntity: refA.entityName,
+      toTable: refA.tableName,
       toField: refA.fieldName,
       junction: {
-        entity: entity.name,
+        table: table.name,
         fromField: fieldB.name,
         toField: fieldA.name,
       },

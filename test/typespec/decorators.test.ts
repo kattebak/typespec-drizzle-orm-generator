@@ -5,7 +5,6 @@ import {
   $check,
   $compositeUnique,
   $createdAt,
-  $entity,
   $foreignKeyDef,
   $indexDef,
   $junction,
@@ -14,6 +13,7 @@ import {
   $pk,
   $primaryKey,
   $references,
+  $table,
   $unique,
   $updatedAt,
   $uuid,
@@ -67,17 +67,17 @@ function mockPropWithModel(name: string, model: object): ModelProperty {
 
 describe("decorator functions", () => {
   // ===========================================
-  // @entity
+  // @table
   // ===========================================
 
-  it("$entity stores name and service in entity state map", () => {
+  it("$table stores name and service in table state map", () => {
     const program = createMockProgram();
     const ctx = createMockContext(program);
     const model = mockModel("Author");
 
-    $entity(ctx, model, "Author", "bookstore");
+    $table(ctx, model, "Author", "bookstore");
 
-    const stored = program.stateMap(StateKeys.entity).get(model);
+    const stored = program.stateMap(StateKeys.table).get(model);
     assert.deepEqual(stored, { name: "Author", service: "bookstore" });
   });
 

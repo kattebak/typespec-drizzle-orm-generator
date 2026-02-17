@@ -2,10 +2,10 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { generateDescribe } from "../../src/generators/describe-generator.ts";
 import { buildRelationGraph } from "../../src/ir/relation-graph.ts";
-import { bookstoreEntities } from "../fixtures/bookstore-ir.ts";
+import { bookstoreTables } from "../fixtures/bookstore-ir.ts";
 
-const graph = buildRelationGraph(bookstoreEntities);
-const output = generateDescribe(bookstoreEntities, graph);
+const graph = buildRelationGraph(bookstoreTables);
+const output = generateDescribe(bookstoreTables, graph);
 
 describe("describe generator", () => {
   // ===========================================
@@ -190,10 +190,10 @@ describe("describe generator", () => {
   });
 
   // ===========================================
-  // All 8 non-junction entities have describe functions
+  // All 8 non-junction tables have describe functions
   // ===========================================
 
-  it("generates describe functions for all 8 non-junction entities", () => {
+  it("generates describe functions for all 8 non-junction tables", () => {
     const expected = [
       "describeAuthor",
       "describeBook",
@@ -210,7 +210,7 @@ describe("describe generator", () => {
     }
   });
 
-  it("generates Description types for all 8 non-junction entities", () => {
+  it("generates Description types for all 8 non-junction tables", () => {
     const expected = [
       "AuthorDescription",
       "BookDescription",

@@ -25,7 +25,7 @@ export interface FieldDef {
     autoGenerate: boolean;
   };
   references?: {
-    entityName: string;
+    tableName: string;
     fieldName: string;
   };
   createdAt: boolean;
@@ -51,7 +51,7 @@ export interface PrimaryKeyDef {
 export interface ForeignKeyDef {
   name: string;
   columns: string[];
-  foreignEntity: string;
+  foreignTable: string;
   foreignColumns: string[];
 }
 
@@ -68,8 +68,8 @@ export interface UniqueConstraintDef {
   columns: string[];
 }
 
-/** Full entity definition extracted from a TypeSpec model */
-export interface EntityDef {
+/** Full table definition extracted from a TypeSpec model */
+export interface TableDef {
   name: string;
   service: string;
   tableName: string;

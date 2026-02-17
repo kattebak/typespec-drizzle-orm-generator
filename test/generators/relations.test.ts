@@ -2,10 +2,10 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { generateRelations } from "../../src/generators/relations-generator.ts";
 import { buildRelationGraph } from "../../src/ir/relation-graph.ts";
-import { bookstoreEntities } from "../fixtures/bookstore-ir.ts";
+import { bookstoreTables } from "../fixtures/bookstore-ir.ts";
 
-const graph = buildRelationGraph(bookstoreEntities);
-const output = generateRelations(bookstoreEntities, graph);
+const graph = buildRelationGraph(bookstoreTables);
+const output = generateRelations(bookstoreTables, graph);
 
 describe("relations generator", () => {
   // ===========================================
@@ -146,10 +146,10 @@ describe("relations generator", () => {
   });
 
   // ===========================================
-  // All 9 entities present
+  // All 9 tables present
   // ===========================================
 
-  it("generates entries for all 9 entities", () => {
+  it("generates entries for all 9 tables", () => {
     const tableVars = [
       "authors",
       "books",
@@ -163,7 +163,7 @@ describe("relations generator", () => {
     ];
 
     for (const name of tableVars) {
-      assert.ok(output.includes(`  ${name}: {`), `Missing entity block: ${name}`);
+      assert.ok(output.includes(`  ${name}: {`), `Missing table block: ${name}`);
     }
   });
 

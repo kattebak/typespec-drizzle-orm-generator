@@ -1,4 +1,4 @@
-import type { EntityDef, FieldDef } from "../ir/types.ts";
+import type { FieldDef, TableDef } from "../ir/types.ts";
 import { toTableVariableName } from "./naming.ts";
 
 /**
@@ -10,14 +10,14 @@ import { toTableVariableName } from "./naming.ts";
  *   integer("birth_year")
  *   timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
  */
-export function mapFieldToColumn(field: FieldDef, entity: EntityDef): string {
+export function mapFieldToColumn(field: FieldDef, table: TableDef): string {
   const parts: string[] = [];
 
   // Base column type
   parts.push(mapBaseType(field));
 
   // Primary key (only for single-column PKs)
-  if (isPrimaryKey(field, entity)) {
+  if (isPrimaryKey(field, table)) {
     parts.push(".primaryKey()");
   }
 
@@ -27,13 +27,13 @@ export function mapFieldToColumn(field: FieldDef, entity: EntityDef): string {
   }
 
   // Not null (skip for PK fields — they're implicitly not null)
-  if (!field.nullable && !isPrimaryKey(field, entity)) {
+  if (!field.nullable && !isPrimaryKey(field, table)) {
     parts.push(".notNull()");
   }
 
   // Foreign key reference
   if (field.references) {
-    parts.push(mapReference(field, entity));
+    parts.push(mapReference(field, table));
   }
 
   // Timestamp defaults
@@ -86,14 +86,14 @@ function mapBaseType(field: FieldDef): string {
   }
 }
 
-function isPrimaryKey(field: FieldDef, entity: EntityDef): boolean {
-  return !entity.primaryKey.isComposite && entity.primaryKey.columns.includes(field.name);
+function isPrimaryKey(field: FieldDef, table: TableDef): boolean {
+  return !table.primaryKey.isComposite && table.primaryKey.columns.includes(field.name);
 }
 
-function mapReference(field: FieldDef, _entity: EntityDef): string {
+function mapReference(field: FieldDef, _table: TableDef): string {
   if (!field.references) return "";
 
-  const targetVar = toTableVariableName(field.references.entityName);
+  const targetVar = toTableVariableName(field.references.tableName);
   const targetField = field.references.fieldName;
   return `.references(() => ${targetVar}.${targetField})`;
 }

@@ -1,14 +1,14 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { assemblePackage } from "../../src/assembler.ts";
-import { bookstoreEntities, bookstoreEnums } from "../fixtures/bookstore-ir.ts";
+import { bookstoreEnums, bookstoreTables } from "../fixtures/bookstore-ir.ts";
 
 const config = {
   packageName: "@bookstore/drizzle-schema",
   packageVersion: "0.0.1",
 };
 
-const files = assemblePackage(bookstoreEntities, bookstoreEnums, config);
+const files = assemblePackage(bookstoreTables, bookstoreEnums, config);
 
 describe("package assembly", () => {
   // ===========================================
@@ -125,10 +125,10 @@ describe("package assembly", () => {
     assert.ok(relations.includes("export const relations = defineRelations(schema, (r) => ({"));
   });
 
-  it("relations.ts contains all 9 entity relation blocks", () => {
+  it("relations.ts contains all 9 table relation blocks", () => {
     const relations = files.get("relations.ts");
     assert.ok(relations);
-    const entities = [
+    const tableVars = [
       "authors",
       "books",
       "genres",
@@ -139,7 +139,7 @@ describe("package assembly", () => {
       "editions",
       "reviews",
     ];
-    for (const name of entities) {
+    for (const name of tableVars) {
       assert.ok(relations.includes(`  ${name}: {`), `Missing relation block: ${name}`);
     }
   });

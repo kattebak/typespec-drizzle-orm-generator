@@ -1,29 +1,29 @@
 import type { Relation, RelationGraph } from "../ir/relation-graph.ts";
-import type { EntityDef } from "../ir/types.ts";
+import type { TableDef } from "../ir/types.ts";
 import { toTableVariableName } from "./naming.ts";
 
 /**
  * Generates the complete describe.ts file content from IR + relation graph.
  *
- * For each non-junction entity:
+ * For each non-junction table:
  *   1. Generate the Description type alias
  *   2. Generate the describe function using findFirst + with
  *   3. Include all relations from the relation graph
  *
- * Junction entities (isJunction === true) are skipped.
+ * Junction tables (isJunction === true) are skipped.
  */
-export function generateDescribe(entities: EntityDef[], graph: RelationGraph): string {
+export function generateDescribe(tables: TableDef[], graph: RelationGraph): string {
   const lines: string[] = [];
 
   lines.push('import type { DrizzleClient } from "./types.js";');
   lines.push('import * as schema from "./schema.js";');
 
-  for (const entity of entities) {
-    if (entity.isJunction) continue;
+  for (const table of tables) {
+    if (table.isJunction) continue;
 
-    const rels = graph.get(entity.name) || [];
+    const rels = graph.get(table.name) || [];
     lines.push("");
-    lines.push(...generateDescribeBlock(entity, rels));
+    lines.push(...generateDescribeBlock(table, rels));
   }
 
   lines.push("");
@@ -31,15 +31,15 @@ export function generateDescribe(entities: EntityDef[], graph: RelationGraph): s
   return lines.join("\n");
 }
 
-function generateDescribeBlock(entity: EntityDef, relations: Relation[]): string[] {
+function generateDescribeBlock(table: TableDef, relations: Relation[]): string[] {
   const lines: string[] = [];
-  const tableVar = toTableVariableName(entity.name);
-  const pkField = entity.primaryKey.columns[0];
-  const funcName = `describe${entity.name}`;
-  const typeName = `${entity.name}Description`;
+  const tableVar = toTableVariableName(table.name);
+  const pkField = table.primaryKey.columns[0];
+  const funcName = `describe${table.name}`;
+  const typeName = `${table.name}Description`;
 
   // Type alias
-  lines.push(...generateDescriptionType(entity, relations, typeName, tableVar));
+  lines.push(...generateDescriptionType(table, relations, typeName, tableVar));
 
   // Function
   lines.push(
@@ -65,7 +65,7 @@ function generateDescribeBlock(entity: EntityDef, relations: Relation[]): string
 }
 
 function generateDescriptionType(
-  _entity: EntityDef,
+  _table: TableDef,
   relations: Relation[],
   typeName: string,
   tableVar: string,
@@ -87,16 +87,16 @@ function generateDescriptionType(
 function getRelationTypeExpression(rel: Relation): string {
   switch (rel.kind) {
     case "one": {
-      const targetTableVar = toTableVariableName(rel.toEntity);
+      const targetTableVar = toTableVariableName(rel.toTable);
       const base = `typeof schema.${targetTableVar}.$inferSelect`;
       return rel.optional ? `${base} | null` : base;
     }
     case "many": {
-      const manyTableVar = toTableVariableName(rel.entity);
+      const manyTableVar = toTableVariableName(rel.table);
       return `(typeof schema.${manyTableVar}.$inferSelect)[]`;
     }
     case "many-through": {
-      const targetTableVar = toTableVariableName(rel.toEntity);
+      const targetTableVar = toTableVariableName(rel.toTable);
       return `(typeof schema.${targetTableVar}.$inferSelect)[]`;
     }
   }

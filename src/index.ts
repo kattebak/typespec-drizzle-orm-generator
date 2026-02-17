@@ -7,7 +7,6 @@ export {
   $check,
   $compositeUnique,
   $createdAt,
-  $entity,
   $foreignKeyDef,
   $indexDef,
   $junction,
@@ -16,6 +15,7 @@ export {
   $pk,
   $primaryKey,
   $references,
+  $table,
   $unique,
   $updatedAt,
   $uuid,
@@ -31,14 +31,14 @@ export interface EmitterOptions {
 export async function $onEmit(context: EmitContext<EmitterOptions>): Promise<void> {
   if (context.program.compilerOptions.noEmit) return;
 
-  const { entities, enums } = buildIR(context.program);
+  const { tables, enums } = buildIR(context.program);
 
   const config = {
     packageName: context.options["package-name"] ?? "drizzle-schema",
     packageVersion: context.options["package-version"] ?? "0.0.1",
   };
 
-  const files = assemblePackage(entities, enums, config);
+  const files = assemblePackage(tables, enums, config);
 
   for (const [filename, content] of files) {
     await emitFile(context.program, {

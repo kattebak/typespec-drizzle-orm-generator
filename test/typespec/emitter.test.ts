@@ -5,7 +5,6 @@ import { assemblePackage } from "../../src/assembler.ts";
 import {
   $compositeUnique,
   $createdAt,
-  $entity,
   $indexDef,
   $junction,
   $maxValue,
@@ -13,6 +12,7 @@ import {
   $pk,
   $primaryKey,
   $references,
+  $table,
   $unique,
   $updatedAt,
   $uuid,
@@ -136,7 +136,7 @@ function createBookstoreMocks(program: ReturnType<typeof createMockProgram>) {
   const authorCreatedAt = addProp(authorModel, "createdAt", "utcDateTime");
   const authorUpdatedAt = addProp(authorModel, "updatedAt", "utcDateTime");
 
-  $entity(ctx, authorModel as unknown as Model, "Author", "bookstore");
+  $table(ctx, authorModel as unknown as Model, "Author", "bookstore");
   $primaryKey(ctx, authorModel as unknown as Model, "authors");
   $pk(ctx, authorId as unknown as ModelProperty);
   $uuid(ctx, authorId as unknown as ModelProperty, "base36", true);
@@ -155,7 +155,7 @@ function createBookstoreMocks(program: ReturnType<typeof createMockProgram>) {
   const bookCreatedAt = addProp(bookModel, "createdAt", "utcDateTime");
   const bookUpdatedAt = addProp(bookModel, "updatedAt", "utcDateTime");
 
-  $entity(ctx, bookModel as unknown as Model, "Book", "bookstore");
+  $table(ctx, bookModel as unknown as Model, "Book", "bookstore");
   $primaryKey(ctx, bookModel as unknown as Model, "books");
   $pk(ctx, bookId as unknown as ModelProperty);
   $uuid(ctx, bookId as unknown as ModelProperty, "base36", true);
@@ -177,7 +177,7 @@ function createBookstoreMocks(program: ReturnType<typeof createMockProgram>) {
   const genreCreatedAt = addProp(genreModel, "createdAt", "utcDateTime");
   const genreUpdatedAt = addProp(genreModel, "updatedAt", "utcDateTime");
 
-  $entity(ctx, genreModel as unknown as Model, "Genre", "bookstore");
+  $table(ctx, genreModel as unknown as Model, "Genre", "bookstore");
   $primaryKey(ctx, genreModel as unknown as Model, "genres");
   $pk(ctx, genreId as unknown as ModelProperty);
   $uuid(ctx, genreId as unknown as ModelProperty, "base36", true);
@@ -189,7 +189,7 @@ function createBookstoreMocks(program: ReturnType<typeof createMockProgram>) {
   const bgBookId = addProp(bookGenreModel, "bookId", "string");
   const bgGenreId = addProp(bookGenreModel, "genreId", "string");
 
-  $entity(ctx, bookGenreModel as unknown as Model, "BookGenre", "bookstore");
+  $table(ctx, bookGenreModel as unknown as Model, "BookGenre", "bookstore");
   $primaryKey(ctx, bookGenreModel as unknown as Model, "book_genres");
   $junction(ctx, bookGenreModel as unknown as Model);
   $pk(ctx, bgBookId as unknown as ModelProperty);
@@ -207,7 +207,7 @@ function createBookstoreMocks(program: ReturnType<typeof createMockProgram>) {
   const btCreatedAt = addProp(bookTagModel, "createdAt", "utcDateTime");
   const btUpdatedAt = addProp(bookTagModel, "updatedAt", "utcDateTime");
 
-  $entity(ctx, bookTagModel as unknown as Model, "BookTag", "bookstore");
+  $table(ctx, bookTagModel as unknown as Model, "BookTag", "bookstore");
   $primaryKey(ctx, bookTagModel as unknown as Model, "book_tags");
   $pk(ctx, bookTagId as unknown as ModelProperty);
   $uuid(ctx, bookTagId as unknown as ModelProperty, "base36", true);
@@ -224,7 +224,7 @@ function createBookstoreMocks(program: ReturnType<typeof createMockProgram>) {
   const tCreatedAt = addProp(translatorModel, "createdAt", "utcDateTime");
   const tUpdatedAt = addProp(translatorModel, "updatedAt", "utcDateTime");
 
-  $entity(ctx, translatorModel as unknown as Model, "Translator", "bookstore");
+  $table(ctx, translatorModel as unknown as Model, "Translator", "bookstore");
   $primaryKey(ctx, translatorModel as unknown as Model, "translators");
   $pk(ctx, translatorId as unknown as ModelProperty);
   $uuid(ctx, translatorId as unknown as ModelProperty, "base36", true);
@@ -240,7 +240,7 @@ function createBookstoreMocks(program: ReturnType<typeof createMockProgram>) {
   const pCreatedAt = addProp(publisherModel, "createdAt", "utcDateTime");
   const pUpdatedAt = addProp(publisherModel, "updatedAt", "utcDateTime");
 
-  $entity(ctx, publisherModel as unknown as Model, "Publisher", "bookstore");
+  $table(ctx, publisherModel as unknown as Model, "Publisher", "bookstore");
   $primaryKey(ctx, publisherModel as unknown as Model, "publishers");
   $pk(ctx, publisherId as unknown as ModelProperty);
   $uuid(ctx, publisherId as unknown as ModelProperty, "base36", true);
@@ -266,7 +266,7 @@ function createBookstoreMocks(program: ReturnType<typeof createMockProgram>) {
   const edCreatedAt = addProp(editionModel, "createdAt", "utcDateTime");
   const edUpdatedAt = addProp(editionModel, "updatedAt", "utcDateTime");
 
-  $entity(ctx, editionModel as unknown as Model, "Edition", "bookstore");
+  $table(ctx, editionModel as unknown as Model, "Edition", "bookstore");
   $primaryKey(ctx, editionModel as unknown as Model, "editions");
   $pk(ctx, editionId as unknown as ModelProperty);
   $uuid(ctx, editionId as unknown as ModelProperty, "base36", true);
@@ -302,7 +302,7 @@ function createBookstoreMocks(program: ReturnType<typeof createMockProgram>) {
   const revCreatedAt = addProp(reviewModel, "createdAt", "utcDateTime");
   const revUpdatedAt = addProp(reviewModel, "updatedAt", "utcDateTime");
 
-  $entity(ctx, reviewModel as unknown as Model, "Review", "bookstore");
+  $table(ctx, reviewModel as unknown as Model, "Review", "bookstore");
   $primaryKey(ctx, reviewModel as unknown as Model, "reviews");
   $pk(ctx, reviewId as unknown as ModelProperty);
   $uuid(ctx, reviewId as unknown as ModelProperty, "base36", true);
@@ -317,22 +317,22 @@ function createBookstoreMocks(program: ReturnType<typeof createMockProgram>) {
 describe("IR builder (from decorator state)", () => {
   const program = createMockProgram();
   createBookstoreMocks(program);
-  const { entities, enums } = buildIR(program);
+  const { tables, enums } = buildIR(program);
 
   // ===========================================
-  // Entity count
+  // Table count
   // ===========================================
 
-  it("extracts all 9 bookstore entities", () => {
-    assert.equal(entities.length, 9);
+  it("extracts all 9 bookstore tables", () => {
+    assert.equal(tables.length, 9);
   });
 
   // ===========================================
-  // Entity names
+  // Table names
   // ===========================================
 
-  it("produces correct entity names", () => {
-    const names = entities.map((e) => e.name).sort();
+  it("produces correct table names", () => {
+    const names = tables.map((t) => t.name).sort();
     assert.deepEqual(names, [
       "Author",
       "Book",
@@ -347,11 +347,11 @@ describe("IR builder (from decorator state)", () => {
   });
 
   // ===========================================
-  // Author entity
+  // Author table
   // ===========================================
 
   it("Author has correct table name and PK", () => {
-    const author = entities.find((e) => e.name === "Author");
+    const author = tables.find((e) => e.name === "Author");
     assert.ok(author);
     assert.equal(author.tableName, "authors");
     assert.equal(author.service, "bookstore");
@@ -361,7 +361,7 @@ describe("IR builder (from decorator state)", () => {
   });
 
   it("Author has 7 fields with correct types", () => {
-    const author = entities.find((e) => e.name === "Author");
+    const author = tables.find((e) => e.name === "Author");
     assert.ok(author);
     assert.equal(author.fields.length, 7);
 
@@ -386,7 +386,7 @@ describe("IR builder (from decorator state)", () => {
   });
 
   it("Author has createdAt and updatedAt timestamps", () => {
-    const author = entities.find((e) => e.name === "Author");
+    const author = tables.find((e) => e.name === "Author");
     assert.ok(author);
     const createdAt = author.fields.find((f) => f.name === "createdAt");
     assert.ok(createdAt);
@@ -398,16 +398,16 @@ describe("IR builder (from decorator state)", () => {
   });
 
   // ===========================================
-  // Book entity — FK references
+  // Book table — FK references
   // ===========================================
 
   it("Book.authorId has references to Author.authorId", () => {
-    const book = entities.find((e) => e.name === "Book");
+    const book = tables.find((e) => e.name === "Book");
     assert.ok(book);
     const authorIdField = book.fields.find((f) => f.name === "authorId");
     assert.ok(authorIdField);
     assert.deepEqual(authorIdField.references, {
-      entityName: "Author",
+      tableName: "Author",
       fieldName: "authorId",
     });
   });
@@ -417,7 +417,7 @@ describe("IR builder (from decorator state)", () => {
   // ===========================================
 
   it("BookGenre is marked as junction with composite PK", () => {
-    const bookGenre = entities.find((e) => e.name === "BookGenre");
+    const bookGenre = tables.find((e) => e.name === "BookGenre");
     assert.ok(bookGenre);
     assert.equal(bookGenre.isJunction, true);
     assert.equal(bookGenre.primaryKey.isComposite, true);
@@ -425,18 +425,18 @@ describe("IR builder (from decorator state)", () => {
   });
 
   it("BookGenre has references to Book and Genre", () => {
-    const bookGenre = entities.find((e) => e.name === "BookGenre");
+    const bookGenre = tables.find((e) => e.name === "BookGenre");
     assert.ok(bookGenre);
     const bookIdField = bookGenre.fields.find((f) => f.name === "bookId");
     assert.ok(bookIdField);
     const genreIdField = bookGenre.fields.find((f) => f.name === "genreId");
     assert.ok(genreIdField);
     assert.deepEqual(bookIdField.references, {
-      entityName: "Book",
+      tableName: "Book",
       fieldName: "bookId",
     });
     assert.deepEqual(genreIdField.references, {
-      entityName: "Genre",
+      tableName: "Genre",
       fieldName: "genreId",
     });
   });
@@ -446,7 +446,7 @@ describe("IR builder (from decorator state)", () => {
   // ===========================================
 
   it("Edition has three FK references (book, translator, publisher)", () => {
-    const edition = entities.find((e) => e.name === "Edition");
+    const edition = tables.find((e) => e.name === "Edition");
     assert.ok(edition);
     const bookId = edition.fields.find((f) => f.name === "bookId");
     assert.ok(bookId);
@@ -456,21 +456,21 @@ describe("IR builder (from decorator state)", () => {
     assert.ok(publisherId);
 
     assert.deepEqual(bookId.references, {
-      entityName: "Book",
+      tableName: "Book",
       fieldName: "bookId",
     });
     assert.deepEqual(translatorId.references, {
-      entityName: "Translator",
+      tableName: "Translator",
       fieldName: "translatorId",
     });
     assert.deepEqual(publisherId.references, {
-      entityName: "Publisher",
+      tableName: "Publisher",
       fieldName: "publisherId",
     });
   });
 
   it("Edition.translatorId is nullable", () => {
-    const edition = entities.find((e) => e.name === "Edition");
+    const edition = tables.find((e) => e.name === "Edition");
     assert.ok(edition);
     const translatorId = edition.fields.find((f) => f.name === "translatorId");
     assert.ok(translatorId);
@@ -482,7 +482,7 @@ describe("IR builder (from decorator state)", () => {
   // ===========================================
 
   it("generates snake_case column names", () => {
-    const book = entities.find((e) => e.name === "Book");
+    const book = tables.find((e) => e.name === "Book");
     assert.ok(book);
     const authorId = book.fields.find((f) => f.name === "authorId");
     assert.ok(authorId);
@@ -508,7 +508,7 @@ describe("IR builder (from decorator state)", () => {
   // ===========================================
 
   it("Book.isbn has unique constraint", () => {
-    const book = entities.find((e) => e.name === "Book");
+    const book = tables.find((e) => e.name === "Book");
     assert.ok(book);
     const isbn = book.fields.find((f) => f.name === "isbn");
     assert.ok(isbn);
@@ -516,7 +516,7 @@ describe("IR builder (from decorator state)", () => {
   });
 
   it("Book has an index on (authorId, publicationYear)", () => {
-    const book = entities.find((e) => e.name === "Book");
+    const book = tables.find((e) => e.name === "Book");
     assert.ok(book);
     assert.equal(book.indexes.length, 1);
     assert.equal(book.indexes[0].name, "books_author_publication_idx");
@@ -525,7 +525,7 @@ describe("IR builder (from decorator state)", () => {
   });
 
   it("Edition has composite unique on (bookId, language)", () => {
-    const edition = entities.find((e) => e.name === "Edition");
+    const edition = tables.find((e) => e.name === "Edition");
     assert.ok(edition);
     assert.equal(edition.uniqueConstraints.length, 1);
     assert.equal(edition.uniqueConstraints[0].name, "edition_book_language_uq");
@@ -533,7 +533,7 @@ describe("IR builder (from decorator state)", () => {
   });
 
   it("Review.rating has minValue/maxValue constraints", () => {
-    const review = entities.find((e) => e.name === "Review");
+    const review = tables.find((e) => e.name === "Review");
     assert.ok(review);
     const rating = review.fields.find((f) => f.name === "rating");
     assert.ok(rating);
@@ -545,14 +545,14 @@ describe("IR builder (from decorator state)", () => {
 describe("end-to-end: decorators → IR builder → assemblePackage", () => {
   const program = createMockProgram();
   createBookstoreMocks(program);
-  const { entities, enums } = buildIR(program);
+  const ir = buildIR(program);
 
   const config = {
     packageName: "@bookstore/drizzle-schema",
     packageVersion: "0.0.1",
   };
 
-  const files = assemblePackage(entities, enums, config);
+  const files = assemblePackage(ir.tables, ir.enums, config);
 
   it("produces all 6 output files", () => {
     assert.equal(files.size, 6);
@@ -582,11 +582,11 @@ describe("end-to-end: decorators → IR builder → assemblePackage", () => {
     }
   });
 
-  it("relations.ts contains defineRelations with all entities", () => {
+  it("relations.ts contains defineRelations with all tables", () => {
     const relations = files.get("relations.ts");
     assert.ok(relations);
     assert.ok(relations.includes("export const relations = defineRelations(schema, (r) => ({"));
-    for (const entity of [
+    for (const name of [
       "authors",
       "books",
       "genres",
@@ -597,7 +597,7 @@ describe("end-to-end: decorators → IR builder → assemblePackage", () => {
       "editions",
       "reviews",
     ]) {
-      assert.ok(relations.includes(`  ${entity}: {`), `Missing relation block: ${entity}`);
+      assert.ok(relations.includes(`  ${name}: {`), `Missing relation block: ${name}`);
     }
   });
 
