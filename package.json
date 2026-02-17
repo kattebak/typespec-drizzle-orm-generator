@@ -1,0 +1,41 @@
+{
+  "name": "@kattebak/typespec-drizzle-orm-generator",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "tspMain": "src/decorators.tsp",
+  "files": [
+    "dist",
+    "src/decorators.tsp"
+  ],
+  "peerDependencies": {
+    "@typespec/compiler": ">=1.0.0"
+  },
+  "scripts": {
+    "build": "tsgo --project tsconfig.build.json",
+    "check": "tsgo --noEmit",
+    "lint": "biome check .",
+    "fix": "biome check --write .",
+    "format": "biome format --write .",
+    "test": "node --test --experimental-strip-types 'test/**/*.test.ts'",
+    "pretest": "npm run check"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.0.0",
+    "@types/better-sqlite3": "^7.6.13",
+    "@typescript/native-preview": "latest",
+    "@typespec/compiler": "^1.9.0",
+    "better-sqlite3": "^12.6.2",
+    "drizzle-orm": "^1.0.0-beta.15-859cf75"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}

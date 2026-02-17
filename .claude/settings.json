@@ -1,0 +1,136 @@
+{
+	"enableAllProjectMcpServers": true,
+	"permissions": {
+		"allow": [
+			"Read(**)",
+			"Edit(**)",
+			"Bash(npm:*)",
+			"Bash(npx:*)",
+			"Bash(node:*)",
+			"Bash(make:*)",
+			"Bash(git:*)",
+			"Bash(gh:*)",
+			"Bash(ls:*)",
+			"Bash(cat:*)",
+			"Bash(head:*)",
+			"Bash(tail:*)",
+			"Bash(grep:*)",
+			"Bash(find:*)",
+			"Bash(xargs:*)",
+			"Bash(sort:*)",
+			"Bash(wc:*)",
+			"Bash(mkdir:*)",
+			"Bash(cp:*)",
+			"Bash(mv:*)",
+			"Bash(rm:*)",
+			"Bash(chmod:*)",
+			"Bash(touch:*)",
+			"Bash(echo:*)",
+			"Bash(pwd:*)",
+			"Bash(which:*)",
+			"Bash(curl:*)",
+			"Bash(wget:*)",
+			"Bash(tar:*)",
+			"Bash(zip:*)",
+			"Bash(unzip:*)",
+			"Bash(md5:*)",
+			"Bash(lsof:*)",
+			"Bash(source:*)",
+			"Bash(bash:*)",
+			"Bash(sh:*)",
+			"Bash(for:*)",
+			"Bash(while:*)",
+			"Bash(if:*)",
+			"Bash(aws:*)",
+			"Bash(pm2:*)",
+			"Bash(./npm-scripts/:*)",
+			"Bash(AWS_ACCESS_KEY_ID=local AWS_SECRET_ACCESS_KEY=local aws dynamodb:*)",
+			"Skill(rng-ddb-query)",
+			"Skill(rng-ddb-query:*)",
+			"Skill(integration-tests)",
+			"Skill(integration-tests:*)",
+			"Skill(dev-logs)",
+			"Skill(dev-logs:*)",
+			"Skill(rng-ddb-migration)",
+			"Skill(rng-ddb-migration:*)",
+			"mcp__context7__resolve-library-id",
+			"mcp__context7__query-docs",
+			"mcp__context7__get-library-docs",
+			"mcp__ide__getDiagnostics",
+
+			"WebSearch",
+
+			"WebFetch(domain:github.com)",
+			"WebFetch(domain:raw.githubusercontent.com)",
+			"WebFetch(domain:gist.github.com)",
+			"WebFetch(domain:docs.github.com)",
+
+			"WebFetch(domain:npmjs.com)",
+			"WebFetch(domain:www.npmjs.com)",
+			"WebFetch(domain:docs.npmjs.com)",
+
+			"WebFetch(domain:nodejs.org)",
+			"WebFetch(domain:nodejs.dev)",
+
+			"WebFetch(domain:developer.mozilla.org)",
+			"WebFetch(domain:mdn.io)",
+
+			"WebFetch(domain:typescriptlang.org)",
+			"WebFetch(domain:www.typescriptlang.org)",
+
+			"WebFetch(domain:vitest.dev)",
+			"WebFetch(domain:jestjs.io)",
+
+			"WebFetch(domain:biomejs.dev)",
+
+			"WebFetch(domain:zod.dev)",
+
+			"WebFetch(domain:anthropic.com)",
+			"WebFetch(domain:docs.anthropic.com)",
+
+			"WebFetch(domain:openai.com)",
+			"WebFetch(domain:platform.openai.com)",
+
+			"WebFetch(domain:stackoverflow.com)",
+			"WebFetch(domain:stackexchange.com)",
+
+			"WebFetch(domain:wikipedia.org)",
+			"WebFetch(domain:en.wikipedia.org)",
+
+			"WebFetch(domain:datatracker.ietf.org)",
+			"WebFetch(domain:tools.ietf.org)",
+			"WebFetch(domain:www.ietf.org)",
+			"WebFetch(domain:www.rfc-editor.org)",
+
+			"WebFetch(domain:maildir.org)",
+			"WebFetch(domain:cr.yp.to)",
+			"WebFetch(domain:qmail.org)",
+
+			"WebFetch(domain:nodemailer.com)",
+			"WebFetch(domain:mjml.io)",
+
+			"WebFetch(domain:postmarkapp.com)",
+			"WebFetch(domain:sendgrid.com)",
+			"WebFetch(domain:docs.sendgrid.com)",
+			"WebFetch(domain:mailchimp.com)",
+			"WebFetch(domain:mailgun.com)",
+
+			"WebFetch(domain:json-schema.org)",
+			"WebFetch(domain:json.schemastore.org)",
+
+			"WebFetch(domain:aws.amazon.com)",
+			"WebFetch(domain:docs.aws.amazon.com)",
+
+			"WebFetch(domain:electrodb.dev)",
+
+			"WebFetch(domain:arxiv.org)",
+			"WebFetch(domain:pypi.org)",
+
+			"WebFetch(domain:docs.litellm.ai)",
+
+			"WebFetch(domain:code.visualstudio.com)"
+		],
+		"deny": [],
+		"ask": []
+	}
+}
