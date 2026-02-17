@@ -2,13 +2,13 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   $createdAt,
-  $entity,
   $junction,
   $lib,
   $onEmit,
   $pk,
   $primaryKey,
   $references,
+  $table,
   $updatedAt,
   $uuid,
 } from "../src/index.ts";
@@ -19,7 +19,7 @@ describe("package exports", () => {
   });
 
   it("exports all decorator functions", () => {
-    assert.equal(typeof $entity, "function");
+    assert.equal(typeof $table, "function");
     assert.equal(typeof $primaryKey, "function");
     assert.equal(typeof $pk, "function");
     assert.equal(typeof $references, "function");

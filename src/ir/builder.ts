@@ -2,17 +2,17 @@ import type { Model, ModelProperty, Scalar } from "@typespec/compiler";
 import { toSnakeCase } from "../generators/naming.ts";
 import { StateKeys } from "../lib.ts";
 import type {
-  EntityDef,
   EnumDef,
   FieldDef,
   FieldType,
   ForeignKeyDef,
   IndexDef,
+  TableDef,
   UniqueConstraintDef,
   UuidEncoding,
 } from "./types.ts";
 
-interface EntityMeta {
+interface TableMeta {
   name: string;
   service: string;
 }
@@ -56,7 +56,7 @@ export interface ProgramStateAccess {
  * Builds IR from TypeSpec program state populated by decorators.
  *
  * Reads:
- * - @entity state -> entity name, service
+ * - @table state -> table name, service
  * - @primaryKey state -> SQL table name
  * - @pk state -> PK columns
  * - @references state -> FK references
@@ -72,14 +72,14 @@ export interface ProgramStateAccess {
  * - @visibility state -> field visibility
  */
 export function buildIR(program: ProgramStateAccess): {
-  entities: EntityDef[];
+  tables: TableDef[];
   enums: EnumDef[];
 } {
-  const entities: EntityDef[] = [];
+  const tables: TableDef[] = [];
   const enums: EnumDef[] = [];
   const seenEnums = new Set<string>();
 
-  const entityState = program.stateMap(StateKeys.entity);
+  const tableState = program.stateMap(StateKeys.table);
   const pkTableState = program.stateMap(StateKeys.primaryKey);
   const pkFieldState = program.stateSet(StateKeys.pk);
   const referencesState = program.stateMap(StateKeys.references);
@@ -96,11 +96,11 @@ export function buildIR(program: ProgramStateAccess): {
   const maxValueState = program.stateMap(StateKeys.maxValue);
   const visibilityState = program.stateMap(StateKeys.visibility);
 
-  for (const [target, meta] of entityState) {
+  for (const [target, meta] of tableState) {
     const model = target as Model;
     if (model.kind !== "Model") continue;
 
-    const entityMeta = meta as EntityMeta;
+    const tableMeta = meta as TableMeta;
     const pkMeta = pkTableState.get(model) as PrimaryKeyMeta | undefined;
     if (!pkMeta) continue;
 
@@ -157,10 +157,10 @@ export function buildIR(program: ProgramStateAccess): {
       if (refTarget) {
         const refModel = refTarget.model;
         if (refModel) {
-          const refEntityMeta = entityState.get(refModel) as EntityMeta | undefined;
-          if (refEntityMeta) {
+          const refTableMeta = tableState.get(refModel) as TableMeta | undefined;
+          if (refTableMeta) {
             field.references = {
-              entityName: refEntityMeta.name,
+              tableName: refTableMeta.name,
               fieldName: refTarget.name,
             };
           }
@@ -213,21 +213,21 @@ export function buildIR(program: ProgramStateAccess): {
     const fkDefs = foreignKeyDefState.get(model) as ForeignKeyMeta[] | undefined;
     const foreignKeys: ForeignKeyDef[] = (fkDefs ?? []).map((fk) => {
       const foreignModel = fk.foreignColumns[0]?.model;
-      const foreignEntityMeta = foreignModel
-        ? (entityState.get(foreignModel) as EntityMeta | undefined)
+      const foreignTableMeta = foreignModel
+        ? (tableState.get(foreignModel) as TableMeta | undefined)
         : undefined;
 
       return {
         name: fk.name,
         columns: fk.columns.map((c) => c.name),
-        foreignEntity: foreignEntityMeta?.name ?? "",
+        foreignTable: foreignTableMeta?.name ?? "",
         foreignColumns: fk.foreignColumns.map((c) => c.name),
       };
     });
 
-    entities.push({
-      name: entityMeta.name,
-      service: entityMeta.service,
+    tables.push({
+      name: tableMeta.name,
+      service: tableMeta.service,
       tableName,
       primaryKey: { tableName, columns: pkColumns, isComposite },
       fields,
@@ -238,7 +238,7 @@ export function buildIR(program: ProgramStateAccess): {
     });
   }
 
-  return { entities, enums };
+  return { tables, enums };
 }
 
 function resolveFieldType(prop: ModelProperty, uuidMeta: UuidMeta | undefined): FieldType {

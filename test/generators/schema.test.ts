@@ -1,12 +1,12 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { generateSchema } from "../../src/generators/schema-generator.ts";
-import type { EntityDef, EnumDef } from "../../src/ir/types.ts";
-import { bookstoreEntities, bookstoreEnums } from "../fixtures/bookstore-ir.ts";
+import type { EnumDef, TableDef } from "../../src/ir/types.ts";
+import { bookstoreEnums, bookstoreTables } from "../fixtures/bookstore-ir.ts";
 
 describe("schema generator", () => {
   it("generates correct imports", () => {
-    const output = generateSchema(bookstoreEntities, bookstoreEnums);
+    const output = generateSchema(bookstoreTables, bookstoreEnums);
 
     assert.ok(output.includes('from "drizzle-orm/pg-core"'));
     assert.ok(output.includes('import { base36Uuid } from "./types.js"'));
@@ -46,11 +46,11 @@ describe("schema generator", () => {
   });
 
   // ===========================================
-  // Individual entity tests
+  // Individual table tests
   // ===========================================
 
   it("generates authors table", () => {
-    const output = generateSchema(bookstoreEntities, bookstoreEnums);
+    const output = generateSchema(bookstoreTables, bookstoreEnums);
 
     assert.ok(output.includes('export const authors = pgTable("authors", {'));
     assert.ok(output.includes('authorId: base36Uuid("author_id").primaryKey().defaultRandom(),'));
@@ -71,7 +71,7 @@ describe("schema generator", () => {
   });
 
   it("generates books table with FK, unique, and index", () => {
-    const output = generateSchema(bookstoreEntities, bookstoreEnums);
+    const output = generateSchema(bookstoreTables, bookstoreEnums);
 
     // Books now uses callback form due to index
     assert.ok(output.includes("export const books = pgTable("));
@@ -97,7 +97,7 @@ describe("schema generator", () => {
   });
 
   it("generates genres table", () => {
-    const output = generateSchema(bookstoreEntities, bookstoreEnums);
+    const output = generateSchema(bookstoreTables, bookstoreEnums);
 
     assert.ok(output.includes('export const genres = pgTable("genres", {'));
     assert.ok(output.includes('genreId: base36Uuid("genre_id").primaryKey().defaultRandom(),'));
@@ -105,7 +105,7 @@ describe("schema generator", () => {
   });
 
   it("generates bookGenres junction table with composite PK", () => {
-    const output = generateSchema(bookstoreEntities, bookstoreEnums);
+    const output = generateSchema(bookstoreTables, bookstoreEnums);
 
     assert.ok(output.includes("export const bookGenres = pgTable("));
     assert.ok(output.includes('"book_genres"'));
@@ -124,7 +124,7 @@ describe("schema generator", () => {
   });
 
   it("generates bookTags table", () => {
-    const output = generateSchema(bookstoreEntities, bookstoreEnums);
+    const output = generateSchema(bookstoreTables, bookstoreEnums);
 
     assert.ok(output.includes('export const bookTags = pgTable("book_tags", {'));
     assert.ok(
@@ -136,7 +136,7 @@ describe("schema generator", () => {
   });
 
   it("generates translators table", () => {
-    const output = generateSchema(bookstoreEntities, bookstoreEnums);
+    const output = generateSchema(bookstoreTables, bookstoreEnums);
 
     assert.ok(output.includes('export const translators = pgTable("translators", {'));
     assert.ok(
@@ -146,7 +146,7 @@ describe("schema generator", () => {
   });
 
   it("generates publishers table", () => {
-    const output = generateSchema(bookstoreEntities, bookstoreEnums);
+    const output = generateSchema(bookstoreTables, bookstoreEnums);
 
     assert.ok(output.includes('export const publishers = pgTable("publishers", {'));
     assert.ok(
@@ -157,7 +157,7 @@ describe("schema generator", () => {
   });
 
   it("generates editions table with FKs, enum field, and composite unique", () => {
-    const output = generateSchema(bookstoreEntities, bookstoreEnums);
+    const output = generateSchema(bookstoreTables, bookstoreEnums);
 
     // Editions now uses callback form due to composite unique
     assert.ok(output.includes("export const editions = pgTable("));
@@ -189,7 +189,7 @@ describe("schema generator", () => {
   });
 
   it("generates reviews table with CHECK constraint", () => {
-    const output = generateSchema(bookstoreEntities, bookstoreEnums);
+    const output = generateSchema(bookstoreTables, bookstoreEnums);
 
     // Reviews now uses callback form due to CHECK constraint
     assert.ok(output.includes("export const reviews = pgTable("));
@@ -215,27 +215,27 @@ describe("schema generator", () => {
   // ===========================================
 
   it("generates sql import when CHECK constraints are present", () => {
-    const output = generateSchema(bookstoreEntities, bookstoreEnums);
+    const output = generateSchema(bookstoreTables, bookstoreEnums);
     assert.ok(output.includes('import { sql } from "drizzle-orm";'));
   });
 
   it("generates check import from pg-core when CHECK constraints exist", () => {
-    const output = generateSchema(bookstoreEntities, bookstoreEnums);
+    const output = generateSchema(bookstoreTables, bookstoreEnums);
     assert.ok(output.includes("check,"));
   });
 
   it("generates index import from pg-core when indexes exist", () => {
-    const output = generateSchema(bookstoreEntities, bookstoreEnums);
+    const output = generateSchema(bookstoreTables, bookstoreEnums);
     assert.ok(output.includes("index,"));
   });
 
   it("generates uniqueIndex import when composite uniques exist", () => {
-    const output = generateSchema(bookstoreEntities, bookstoreEnums);
+    const output = generateSchema(bookstoreTables, bookstoreEnums);
     assert.ok(output.includes("uniqueIndex,"));
   });
 
   it("generates bookFormatEnum declaration from bookstore enums", () => {
-    const output = generateSchema(bookstoreEntities, bookstoreEnums);
+    const output = generateSchema(bookstoreTables, bookstoreEnums);
     assert.ok(output.includes('export const bookFormatEnum = pgEnum("book_format", ['));
     assert.ok(output.includes('"hardcover",'));
     assert.ok(output.includes('"paperback",'));
@@ -244,7 +244,7 @@ describe("schema generator", () => {
   });
 
   it("generates composite FK constraint in table callback", () => {
-    const entityWithFK: EntityDef = {
+    const tableWithFK: TableDef = {
       name: "BookAuthor",
       service: "bookstore",
       tableName: "book_authors",
@@ -279,7 +279,7 @@ describe("schema generator", () => {
         {
           name: "author_name_fk",
           columns: ["authorId", "authorFullName"],
-          foreignEntity: "Author",
+          foreignTable: "Author",
           foreignColumns: ["authorId", "fullName"],
         },
       ],
@@ -287,7 +287,7 @@ describe("schema generator", () => {
       indexes: [],
       uniqueConstraints: [],
     };
-    const output = generateSchema([entityWithFK], []);
+    const output = generateSchema([tableWithFK], []);
     assert.ok(output.includes("foreignKey({"));
     assert.ok(output.includes('name: "author_name_fk"'));
     assert.ok(output.includes("columns: [table.authorId, table.authorFullName]"));
@@ -295,7 +295,7 @@ describe("schema generator", () => {
   });
 
   it("generates @check constraint on a field", () => {
-    const entityWithCheck: EntityDef = {
+    const tableWithCheck: TableDef = {
       name: "Review",
       service: "bookstore",
       tableName: "reviews",
@@ -324,13 +324,13 @@ describe("schema generator", () => {
       indexes: [],
       uniqueConstraints: [],
     };
-    const output = generateSchema([entityWithCheck], []);
+    const output = generateSchema([tableWithCheck], []);
     assert.ok(output.includes('check("reviews_text_check"'));
     assert.ok(output.includes("length(text) <= 10000"));
   });
 
   it("generates unique index for composite unique constraints", () => {
-    const entityWithUQ: EntityDef = {
+    const tableWithUQ: TableDef = {
       name: "Edition",
       service: "test",
       tableName: "editions",
@@ -366,14 +366,14 @@ describe("schema generator", () => {
       indexes: [],
       uniqueConstraints: [{ name: "edition_book_lang_uq", columns: ["bookId", "language"] }],
     };
-    const output = generateSchema([entityWithUQ], []);
+    const output = generateSchema([tableWithUQ], []);
     assert.ok(
       output.includes('uniqueIndex("edition_book_lang_uq").on(table.bookId, table.language)'),
     );
   });
 
   it("generates non-unique index", () => {
-    const entityWithIdx: EntityDef = {
+    const tableWithIdx: TableDef = {
       name: "Book",
       service: "test",
       tableName: "books",
@@ -409,12 +409,12 @@ describe("schema generator", () => {
       indexes: [{ name: "books_author_year_idx", columns: ["authorId", "year"], unique: false }],
       uniqueConstraints: [],
     };
-    const output = generateSchema([entityWithIdx], []);
+    const output = generateSchema([tableWithIdx], []);
     assert.ok(output.includes('index("books_author_year_idx").on(table.authorId, table.year)'));
   });
 
   it("generates unique index via @index({ unique: true })", () => {
-    const entityWithUniqueIdx: EntityDef = {
+    const tableWithUniqueIdx: TableDef = {
       name: "Book",
       service: "test",
       tableName: "books",
@@ -442,12 +442,12 @@ describe("schema generator", () => {
       indexes: [{ name: "books_isbn_idx", columns: ["isbn"], unique: true }],
       uniqueConstraints: [],
     };
-    const output = generateSchema([entityWithUniqueIdx], []);
+    const output = generateSchema([tableWithUniqueIdx], []);
     assert.ok(output.includes('uniqueIndex("books_isbn_idx").on(table.isbn)'));
   });
 
   it("generates .unique() for single-column unique constraint", () => {
-    const entityWithUnique: EntityDef = {
+    const tableWithUnique: TableDef = {
       name: "Author",
       service: "test",
       tableName: "authors",
@@ -476,12 +476,12 @@ describe("schema generator", () => {
       indexes: [],
       uniqueConstraints: [],
     };
-    const output = generateSchema([entityWithUnique], []);
+    const output = generateSchema([tableWithUnique], []);
     assert.ok(output.includes('email: text("email").notNull().unique(),'));
   });
 
   it("generates CHECK for minValue only", () => {
-    const entity: EntityDef = {
+    const tableDef: TableDef = {
       name: "Item",
       service: "test",
       tableName: "items",
@@ -510,7 +510,7 @@ describe("schema generator", () => {
       indexes: [],
       uniqueConstraints: [],
     };
-    const output = generateSchema([entity], []);
+    const output = generateSchema([tableDef], []);
     assert.ok(output.includes('check("items_quantity_check"'));
     // biome-ignore lint/suspicious/noTemplateCurlyInString: checking literal template output
     assert.ok(output.includes("${table.quantity} >= 0"));
@@ -518,7 +518,7 @@ describe("schema generator", () => {
   });
 
   it("generates CHECK for maxValue only", () => {
-    const entity: EntityDef = {
+    const tableDef: TableDef = {
       name: "Item",
       service: "test",
       tableName: "items",
@@ -547,7 +547,7 @@ describe("schema generator", () => {
       indexes: [],
       uniqueConstraints: [],
     };
-    const output = generateSchema([entity], []);
+    const output = generateSchema([tableDef], []);
     assert.ok(output.includes('check("items_score_check"'));
     // biome-ignore lint/suspicious/noTemplateCurlyInString: checking literal template output
     assert.ok(output.includes("${table.score} <= 100"));
@@ -555,7 +555,7 @@ describe("schema generator", () => {
   });
 
   it("generates default value in column definition", () => {
-    const entity: EntityDef = {
+    const tableDef: TableDef = {
       name: "Config",
       service: "test",
       tableName: "configs",
@@ -584,7 +584,7 @@ describe("schema generator", () => {
       indexes: [],
       uniqueConstraints: [],
     };
-    const output = generateSchema([entity], []);
+    const output = generateSchema([tableDef], []);
     assert.ok(output.includes(".default(3)"));
   });
 
@@ -592,8 +592,8 @@ describe("schema generator", () => {
   // Full output structure
   // ===========================================
 
-  it("generates all 9 entities", () => {
-    const output = generateSchema(bookstoreEntities, bookstoreEnums);
+  it("generates all 9 tables", () => {
+    const output = generateSchema(bookstoreTables, bookstoreEnums);
 
     const tableNames = [
       "authors",
@@ -613,7 +613,7 @@ describe("schema generator", () => {
   });
 
   it("produces valid-looking TypeScript (no syntax errors in structure)", () => {
-    const output = generateSchema(bookstoreEntities, bookstoreEnums);
+    const output = generateSchema(bookstoreTables, bookstoreEnums);
 
     // Check balanced braces (rough check)
     const opens = (output.match(/{/g) || []).length;

@@ -4,7 +4,7 @@ import { generateRelations } from "./generators/relations-generator.ts";
 import { generateSchema } from "./generators/schema-generator.ts";
 import { generateTypes } from "./generators/types-generator.ts";
 import { buildRelationGraph } from "./ir/relation-graph.ts";
-import type { EntityDef, EnumDef } from "./ir/types.ts";
+import type { EnumDef, TableDef } from "./ir/types.ts";
 
 export interface EmitterConfig {
   packageName: string;
@@ -18,18 +18,18 @@ export interface EmitterConfig {
  *   package.json, types.ts, schema.ts, relations.ts, describe.ts, index.ts
  */
 export function assemblePackage(
-  entities: EntityDef[],
+  tables: TableDef[],
   enums: EnumDef[],
   config: EmitterConfig,
 ): Map<string, string> {
-  const graph = buildRelationGraph(entities);
+  const graph = buildRelationGraph(tables);
 
   return new Map([
     ["package.json", generatePackageJson(config)],
     ["types.ts", generateTypes()],
-    ["schema.ts", generateSchema(entities, enums)],
-    ["relations.ts", generateRelations(entities, graph)],
-    ["describe.ts", generateDescribe(entities, graph)],
+    ["schema.ts", generateSchema(tables, enums)],
+    ["relations.ts", generateRelations(tables, graph)],
+    ["describe.ts", generateDescribe(tables, graph)],
     ["index.ts", generateIndex()],
   ]);
 }

@@ -1,10 +1,10 @@
-import type { EntityDef, EnumDef } from "../../src/ir/types.ts";
+import type { EnumDef, TableDef } from "../../src/ir/types.ts";
 
 // ============================================
 // Author
 // ============================================
 
-const author: EntityDef = {
+const author: TableDef = {
   name: "Author",
   service: "bookstore",
   tableName: "authors",
@@ -79,7 +79,7 @@ const author: EntityDef = {
 // Book
 // ============================================
 
-const book: EntityDef = {
+const book: TableDef = {
   name: "Book",
   service: "bookstore",
   tableName: "books",
@@ -100,7 +100,7 @@ const book: EntityDef = {
       type: { kind: "uuid", encoding: "base36" },
       nullable: false,
       uuid: { encoding: "base36", autoGenerate: false },
-      references: { entityName: "Author", fieldName: "authorId" },
+      references: { tableName: "Author", fieldName: "authorId" },
       createdAt: false,
       updatedAt: false,
     },
@@ -179,7 +179,7 @@ const book: EntityDef = {
 // Genre
 // ============================================
 
-const genre: EntityDef = {
+const genre: TableDef = {
   name: "Genre",
   service: "bookstore",
   tableName: "genres",
@@ -238,7 +238,7 @@ const genre: EntityDef = {
 // BookGenre (junction)
 // ============================================
 
-const bookGenre: EntityDef = {
+const bookGenre: TableDef = {
   name: "BookGenre",
   service: "bookstore",
   tableName: "book_genres",
@@ -254,7 +254,7 @@ const bookGenre: EntityDef = {
       type: { kind: "uuid", encoding: "base36" },
       nullable: false,
       uuid: { encoding: "base36", autoGenerate: false },
-      references: { entityName: "Book", fieldName: "bookId" },
+      references: { tableName: "Book", fieldName: "bookId" },
       createdAt: false,
       updatedAt: false,
     },
@@ -264,7 +264,7 @@ const bookGenre: EntityDef = {
       type: { kind: "uuid", encoding: "base36" },
       nullable: false,
       uuid: { encoding: "base36", autoGenerate: false },
-      references: { entityName: "Genre", fieldName: "genreId" },
+      references: { tableName: "Genre", fieldName: "genreId" },
       createdAt: false,
       updatedAt: false,
     },
@@ -279,7 +279,7 @@ const bookGenre: EntityDef = {
 // BookTag
 // ============================================
 
-const bookTag: EntityDef = {
+const bookTag: TableDef = {
   name: "BookTag",
   service: "bookstore",
   tableName: "book_tags",
@@ -300,7 +300,7 @@ const bookTag: EntityDef = {
       type: { kind: "uuid", encoding: "base36" },
       nullable: false,
       uuid: { encoding: "base36", autoGenerate: false },
-      references: { entityName: "Book", fieldName: "bookId" },
+      references: { tableName: "Book", fieldName: "bookId" },
       createdAt: false,
       updatedAt: false,
     },
@@ -340,7 +340,7 @@ const bookTag: EntityDef = {
 // Translator
 // ============================================
 
-const translator: EntityDef = {
+const translator: TableDef = {
   name: "Translator",
   service: "bookstore",
   tableName: "translators",
@@ -399,7 +399,7 @@ const translator: EntityDef = {
 // Publisher
 // ============================================
 
-const publisher: EntityDef = {
+const publisher: TableDef = {
   name: "Publisher",
   service: "bookstore",
   tableName: "publishers",
@@ -466,7 +466,7 @@ const publisher: EntityDef = {
 // Edition
 // ============================================
 
-const edition: EntityDef = {
+const edition: TableDef = {
   name: "Edition",
   service: "bookstore",
   tableName: "editions",
@@ -487,7 +487,7 @@ const edition: EntityDef = {
       type: { kind: "uuid", encoding: "base36" },
       nullable: false,
       uuid: { encoding: "base36", autoGenerate: false },
-      references: { entityName: "Book", fieldName: "bookId" },
+      references: { tableName: "Book", fieldName: "bookId" },
       createdAt: false,
       updatedAt: false,
     },
@@ -497,7 +497,7 @@ const edition: EntityDef = {
       type: { kind: "uuid", encoding: "base36" },
       nullable: true,
       uuid: { encoding: "base36", autoGenerate: false },
-      references: { entityName: "Translator", fieldName: "translatorId" },
+      references: { tableName: "Translator", fieldName: "translatorId" },
       createdAt: false,
       updatedAt: false,
     },
@@ -507,7 +507,7 @@ const edition: EntityDef = {
       type: { kind: "uuid", encoding: "base36" },
       nullable: false,
       uuid: { encoding: "base36", autoGenerate: false },
-      references: { entityName: "Publisher", fieldName: "publisherId" },
+      references: { tableName: "Publisher", fieldName: "publisherId" },
       createdAt: false,
       updatedAt: false,
     },
@@ -589,7 +589,7 @@ const edition: EntityDef = {
 // Review
 // ============================================
 
-const review: EntityDef = {
+const review: TableDef = {
   name: "Review",
   service: "bookstore",
   tableName: "reviews",
@@ -610,7 +610,7 @@ const review: EntityDef = {
       type: { kind: "uuid", encoding: "base36" },
       nullable: false,
       uuid: { encoding: "base36", autoGenerate: false },
-      references: { entityName: "Book", fieldName: "bookId" },
+      references: { tableName: "Book", fieldName: "bookId" },
       createdAt: false,
       updatedAt: false,
     },
@@ -670,8 +670,8 @@ const review: EntityDef = {
   uniqueConstraints: [],
 };
 
-/** All 9 bookstore entities as IR, ordered for FK resolution */
-export const bookstoreEntities: EntityDef[] = [
+/** All 9 bookstore tables as IR, ordered for FK resolution */
+export const bookstoreTables: TableDef[] = [
   author,
   book,
   genre,

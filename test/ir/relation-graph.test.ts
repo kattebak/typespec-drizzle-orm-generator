@@ -6,7 +6,7 @@ import type {
   OneRelation,
 } from "../../src/ir/relation-graph.ts";
 import { buildRelationGraph, deriveOneRelationName } from "../../src/ir/relation-graph.ts";
-import { bookstoreEntities } from "../fixtures/bookstore-ir.ts";
+import { bookstoreTables } from "../fixtures/bookstore-ir.ts";
 
 describe("deriveOneRelationName", () => {
   it('strips "Id" suffix: authorId → author', () => {
@@ -23,16 +23,16 @@ describe("deriveOneRelationName", () => {
 });
 
 describe("buildRelationGraph", () => {
-  const graph = buildRelationGraph(bookstoreEntities);
+  const graph = buildRelationGraph(bookstoreTables);
 
   // ===========================================
   // Graph structure
   // ===========================================
 
-  it("creates entries for all 9 entities", () => {
+  it("creates entries for all 9 tables", () => {
     assert.equal(graph.size, 9);
-    for (const entity of bookstoreEntities) {
-      assert.ok(graph.has(entity.name), `Missing graph entry for ${entity.name}`);
+    for (const table of bookstoreTables) {
+      assert.ok(graph.has(table.name), `Missing graph entry for ${table.name}`);
     }
   });
 
@@ -46,7 +46,7 @@ describe("buildRelationGraph", () => {
     const booksRel = rels.find((r) => r.name === "books");
     assert.ok(booksRel);
     assert.equal(booksRel.kind, "many");
-    assert.equal((booksRel as ManyRelation).entity, "Book");
+    assert.equal((booksRel as ManyRelation).table, "Book");
   });
 
   it("Author has exactly 1 relation (books)", () => {
@@ -67,9 +67,9 @@ describe("buildRelationGraph", () => {
     assert.deepEqual(authorRel, {
       kind: "one",
       name: "author",
-      fromEntity: "Book",
+      fromTable: "Book",
       fromField: "authorId",
-      toEntity: "Author",
+      toTable: "Author",
       toField: "authorId",
       optional: false,
     });
@@ -93,12 +93,12 @@ describe("buildRelationGraph", () => {
     assert.deepEqual(genresRel, {
       kind: "many-through",
       name: "genres",
-      fromEntity: "Book",
+      fromTable: "Book",
       fromField: "bookId",
-      toEntity: "Genre",
+      toTable: "Genre",
       toField: "genreId",
       junction: {
-        entity: "BookGenre",
+        table: "BookGenre",
         fromField: "bookId",
         toField: "genreId",
       },
@@ -123,12 +123,12 @@ describe("buildRelationGraph", () => {
     assert.deepEqual(booksRel, {
       kind: "many-through",
       name: "books",
-      fromEntity: "Genre",
+      fromTable: "Genre",
       fromField: "genreId",
-      toEntity: "Book",
+      toTable: "Book",
       toField: "bookId",
       junction: {
-        entity: "BookGenre",
+        table: "BookGenre",
         fromField: "genreId",
         toField: "bookId",
       },
@@ -152,13 +152,13 @@ describe("buildRelationGraph", () => {
     const bookRel = rels.find((r) => r.name === "book") as OneRelation;
     assert.ok(bookRel);
     assert.equal(bookRel.kind, "one");
-    assert.equal(bookRel.toEntity, "Book");
+    assert.equal(bookRel.toTable, "Book");
     assert.equal(bookRel.fromField, "bookId");
 
     const genreRel = rels.find((r) => r.name === "genre") as OneRelation;
     assert.ok(genreRel);
     assert.equal(genreRel.kind, "one");
-    assert.equal(genreRel.toEntity, "Genre");
+    assert.equal(genreRel.toTable, "Genre");
     assert.equal(genreRel.fromField, "genreId");
   });
 
@@ -194,7 +194,7 @@ describe("buildRelationGraph", () => {
     assert.ok(bookRel);
     assert.equal(bookRel.kind, "one");
     assert.equal(bookRel.fromField, "bookId");
-    assert.equal(bookRel.toEntity, "Book");
+    assert.equal(bookRel.toTable, "Book");
     assert.equal(bookRel.optional, false);
   });
 
@@ -208,7 +208,7 @@ describe("buildRelationGraph", () => {
     const editionsRel = rels.find((r) => r.name === "editions");
     assert.ok(editionsRel);
     assert.equal(editionsRel.kind, "many");
-    assert.equal((editionsRel as ManyRelation).entity, "Edition");
+    assert.equal((editionsRel as ManyRelation).table, "Edition");
   });
 
   // ===========================================
@@ -221,7 +221,7 @@ describe("buildRelationGraph", () => {
     const editionsRel = rels.find((r) => r.name === "editions");
     assert.ok(editionsRel);
     assert.equal(editionsRel.kind, "many");
-    assert.equal((editionsRel as ManyRelation).entity, "Edition");
+    assert.equal((editionsRel as ManyRelation).table, "Edition");
   });
 
   // ===========================================
@@ -265,7 +265,7 @@ describe("buildRelationGraph", () => {
     assert.ok(bookRel);
     assert.equal(bookRel.kind, "one");
     assert.equal(bookRel.fromField, "bookId");
-    assert.equal(bookRel.toEntity, "Book");
+    assert.equal(bookRel.toTable, "Book");
   });
 
   it("Review has exactly 1 relation", () => {

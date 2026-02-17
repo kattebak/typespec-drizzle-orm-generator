@@ -8,7 +8,7 @@ namespace Bookstore;
 // Author
 // ============================================
 
-@entity("Author", "bookstore")
+@table("Author", "bookstore")
 @primaryKey("authors")
 model Author {
   @pk
@@ -34,7 +34,7 @@ model Author {
 // Book
 // ============================================
 
-@entity("Book", "bookstore")
+@table("Book", "bookstore")
 @primaryKey("books")
 model Book {
   @pk
@@ -66,7 +66,7 @@ model Book {
 // Genre
 // ============================================
 
-@entity("Genre", "bookstore")
+@table("Genre", "bookstore")
 @primaryKey("genres")
 model Genre {
   @pk
@@ -88,7 +88,7 @@ model Genre {
 // BookGenre (junction — links Book ↔ Genre)
 // ============================================
 
-@entity("BookGenre", "bookstore")
+@table("BookGenre", "bookstore")
 @junction
 @primaryKey("book_genres")
 model BookGenre {
@@ -107,7 +107,7 @@ model BookGenre {
 // BookTag
 // ============================================
 
-@entity("BookTag", "bookstore")
+@table("BookTag", "bookstore")
 @primaryKey("book_tags")
 model BookTag {
   @pk
@@ -131,7 +131,7 @@ model BookTag {
 // Translator
 // ============================================
 
-@entity("Translator", "bookstore")
+@table("Translator", "bookstore")
 @primaryKey("translators")
 model Translator {
   @pk
@@ -153,7 +153,7 @@ model Translator {
 // Publisher
 // ============================================
 
-@entity("Publisher", "bookstore")
+@table("Publisher", "bookstore")
 @primaryKey("publishers")
 model Publisher {
   @pk
@@ -177,7 +177,7 @@ model Publisher {
 // Edition
 // ============================================
 
-@entity("Edition", "bookstore")
+@table("Edition", "bookstore")
 @primaryKey("editions")
 model Edition {
   @pk
@@ -215,7 +215,7 @@ model Edition {
 // Review
 // ============================================
 
-@entity("Review", "bookstore")
+@table("Review", "bookstore")
 @primaryKey("reviews")
 model Review {
   @pk

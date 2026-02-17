@@ -1,10 +1,10 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { mapFieldToColumn } from "../../src/generators/column-mapper.ts";
-import type { EntityDef, FieldDef } from "../../src/ir/types.ts";
+import type { FieldDef, TableDef } from "../../src/ir/types.ts";
 
-/** Minimal entity for testing single-column PK fields */
-function makeEntity(pkColumns: string[], overrides?: Partial<EntityDef>): EntityDef {
+/** Minimal table for testing single-column PK fields */
+function makeTable(pkColumns: string[], overrides?: Partial<TableDef>): TableDef {
   return {
     name: "Test",
     service: "test",
@@ -48,8 +48,8 @@ describe("column mapper", () => {
       type: { kind: "text" },
       nullable: false,
     });
-    const entity = makeEntity(["id"]);
-    assert.equal(mapFieldToColumn(field, entity), 'text("title").notNull()');
+    const table = makeTable(["id"]);
+    assert.equal(mapFieldToColumn(field, table), 'text("title").notNull()');
   });
 
   it("maps an optional text field (nullable)", () => {
@@ -59,8 +59,8 @@ describe("column mapper", () => {
       type: { kind: "text" },
       nullable: true,
     });
-    const entity = makeEntity(["id"]);
-    assert.equal(mapFieldToColumn(field, entity), 'text("bio")');
+    const table = makeTable(["id"]);
+    assert.equal(mapFieldToColumn(field, table), 'text("bio")');
   });
 
   it("maps a required integer field", () => {
@@ -70,8 +70,8 @@ describe("column mapper", () => {
       type: { kind: "integer" },
       nullable: false,
     });
-    const entity = makeEntity(["id"]);
-    assert.equal(mapFieldToColumn(field, entity), 'integer("publication_year").notNull()');
+    const table = makeTable(["id"]);
+    assert.equal(mapFieldToColumn(field, table), 'integer("publication_year").notNull()');
   });
 
   it("maps an optional integer field", () => {
@@ -81,8 +81,8 @@ describe("column mapper", () => {
       type: { kind: "integer" },
       nullable: true,
     });
-    const entity = makeEntity(["id"]);
-    assert.equal(mapFieldToColumn(field, entity), 'integer("page_count")');
+    const table = makeTable(["id"]);
+    assert.equal(mapFieldToColumn(field, table), 'integer("page_count")');
   });
 
   it("maps a varchar field", () => {
@@ -92,8 +92,8 @@ describe("column mapper", () => {
       type: { kind: "varchar", length: 256 },
       nullable: false,
     });
-    const entity = makeEntity(["id"]);
-    assert.equal(mapFieldToColumn(field, entity), 'varchar("name", { length: 256 }).notNull()');
+    const table = makeTable(["id"]);
+    assert.equal(mapFieldToColumn(field, table), 'varchar("name", { length: 256 }).notNull()');
   });
 
   it("maps a bigint field", () => {
@@ -103,8 +103,8 @@ describe("column mapper", () => {
       type: { kind: "bigint" },
       nullable: false,
     });
-    const entity = makeEntity(["id"]);
-    assert.equal(mapFieldToColumn(field, entity), 'bigint("count", { mode: "number" }).notNull()');
+    const table = makeTable(["id"]);
+    assert.equal(mapFieldToColumn(field, table), 'bigint("count", { mode: "number" }).notNull()');
   });
 
   it("maps a real field", () => {
@@ -114,8 +114,8 @@ describe("column mapper", () => {
       type: { kind: "real" },
       nullable: false,
     });
-    const entity = makeEntity(["id"]);
-    assert.equal(mapFieldToColumn(field, entity), 'real("score").notNull()');
+    const table = makeTable(["id"]);
+    assert.equal(mapFieldToColumn(field, table), 'real("score").notNull()');
   });
 
   it("maps a doublePrecision field", () => {
@@ -125,8 +125,8 @@ describe("column mapper", () => {
       type: { kind: "doublePrecision" },
       nullable: false,
     });
-    const entity = makeEntity(["id"]);
-    assert.equal(mapFieldToColumn(field, entity), 'doublePrecision("price").notNull()');
+    const table = makeTable(["id"]);
+    assert.equal(mapFieldToColumn(field, table), 'doublePrecision("price").notNull()');
   });
 
   it("maps a boolean field", () => {
@@ -136,8 +136,8 @@ describe("column mapper", () => {
       type: { kind: "boolean" },
       nullable: false,
     });
-    const entity = makeEntity(["id"]);
-    assert.equal(mapFieldToColumn(field, entity), 'boolean("active").notNull()');
+    const table = makeTable(["id"]);
+    assert.equal(mapFieldToColumn(field, table), 'boolean("active").notNull()');
   });
 
   // ===========================================
@@ -152,9 +152,9 @@ describe("column mapper", () => {
       nullable: false,
       uuid: { encoding: "base36", autoGenerate: true },
     });
-    const entity = makeEntity(["authorId"]);
+    const table = makeTable(["authorId"]);
     assert.equal(
-      mapFieldToColumn(field, entity),
+      mapFieldToColumn(field, table),
       'base36Uuid("author_id").primaryKey().defaultRandom()',
     );
   });
@@ -166,11 +166,11 @@ describe("column mapper", () => {
       type: { kind: "uuid", encoding: "base36" },
       nullable: false,
       uuid: { encoding: "base36", autoGenerate: false },
-      references: { entityName: "Author", fieldName: "authorId" },
+      references: { tableName: "Author", fieldName: "authorId" },
     });
-    const entity = makeEntity(["bookId"]);
+    const table = makeTable(["bookId"]);
     assert.equal(
-      mapFieldToColumn(field, entity),
+      mapFieldToColumn(field, table),
       'base36Uuid("author_id").notNull().references(() => authors.authorId)',
     );
   });
@@ -182,11 +182,11 @@ describe("column mapper", () => {
       type: { kind: "uuid", encoding: "base36" },
       nullable: true,
       uuid: { encoding: "base36", autoGenerate: false },
-      references: { entityName: "Translator", fieldName: "translatorId" },
+      references: { tableName: "Translator", fieldName: "translatorId" },
     });
-    const entity = makeEntity(["editionId"]);
+    const table = makeTable(["editionId"]);
     assert.equal(
-      mapFieldToColumn(field, entity),
+      mapFieldToColumn(field, table),
       'base36Uuid("translator_id").references(() => translators.translatorId)',
     );
   });
@@ -203,9 +203,9 @@ describe("column mapper", () => {
       nullable: false,
       createdAt: true,
     });
-    const entity = makeEntity(["id"]);
+    const table = makeTable(["id"]);
     assert.equal(
-      mapFieldToColumn(field, entity),
+      mapFieldToColumn(field, table),
       'timestamp("created_at", { withTimezone: true }).notNull().defaultNow()',
     );
   });
@@ -218,9 +218,9 @@ describe("column mapper", () => {
       nullable: false,
       updatedAt: true,
     });
-    const entity = makeEntity(["id"]);
+    const table = makeTable(["id"]);
     assert.equal(
-      mapFieldToColumn(field, entity),
+      mapFieldToColumn(field, table),
       'timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()',
     );
   });
@@ -232,9 +232,9 @@ describe("column mapper", () => {
       type: { kind: "timestamp" },
       nullable: false,
     });
-    const entity = makeEntity(["id"]);
+    const table = makeTable(["id"]);
     assert.equal(
-      mapFieldToColumn(field, entity),
+      mapFieldToColumn(field, table),
       'timestamp("review_date", { withTimezone: true }).notNull()',
     );
   });
@@ -254,8 +254,8 @@ describe("column mapper", () => {
       },
       nullable: false,
     });
-    const entity = makeEntity(["id"]);
-    assert.equal(mapFieldToColumn(field, entity), 'bookFormatEnum("format").notNull()');
+    const table = makeTable(["id"]);
+    assert.equal(mapFieldToColumn(field, table), 'bookFormatEnum("format").notNull()');
   });
 
   // ===========================================
@@ -269,14 +269,14 @@ describe("column mapper", () => {
       type: { kind: "uuid", encoding: "base36" },
       nullable: false,
       uuid: { encoding: "base36", autoGenerate: false },
-      references: { entityName: "Book", fieldName: "bookId" },
+      references: { tableName: "Book", fieldName: "bookId" },
     });
-    const entity = makeEntity(["bookId", "genreId"], {
+    const table = makeTable(["bookId", "genreId"], {
       name: "BookGenre",
       tableName: "book_genres",
     });
     assert.equal(
-      mapFieldToColumn(field, entity),
+      mapFieldToColumn(field, table),
       'base36Uuid("book_id").notNull().references(() => books.bookId)',
     );
   });
@@ -293,8 +293,8 @@ describe("column mapper", () => {
       nullable: false,
       defaultValue: 3,
     });
-    const entity = makeEntity(["id"]);
-    assert.equal(mapFieldToColumn(field, entity), 'integer("rating").notNull().default(3)');
+    const table = makeTable(["id"]);
+    assert.equal(mapFieldToColumn(field, table), 'integer("rating").notNull().default(3)');
   });
 
   it("maps a field with a string default", () => {
@@ -309,10 +309,7 @@ describe("column mapper", () => {
       nullable: false,
       defaultValue: "draft",
     });
-    const entity = makeEntity(["id"]);
-    assert.equal(
-      mapFieldToColumn(field, entity),
-      'statusEnum("status").notNull().default("draft")',
-    );
+    const table = makeTable(["id"]);
+    assert.equal(mapFieldToColumn(field, table), 'statusEnum("status").notNull().default("draft")');
   });
 });

@@ -76,7 +76,7 @@ describe("bookstore relations (SQLite integration)", () => {
   });
 
   // ===========================================
-  // Junction entity: BookGenre → Book, Genre
+  // Junction table: BookGenre → Book, Genre
   // ===========================================
 
   it("queries a junction record with both sides", async () => {

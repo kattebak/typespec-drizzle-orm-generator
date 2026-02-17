@@ -9,11 +9,11 @@ export function toCamelCase(str: string): string {
 }
 
 /**
- * Convert PascalCase entity name to camelCase table variable name.
+ * Convert PascalCase table name to camelCase table variable name.
  * "BookGenre" → "bookGenres" (pluralized for table variables)
  */
-export function toTableVariableName(entityName: string): string {
-  const camel = entityName[0].toLowerCase() + entityName.slice(1);
+export function toTableVariableName(name: string): string {
+  const camel = name[0].toLowerCase() + name.slice(1);
   return pluralize(camel);
 }
 

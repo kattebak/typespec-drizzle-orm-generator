@@ -1,5 +1,5 @@
 import type { Relation, RelationGraph } from "../ir/relation-graph.ts";
-import type { EntityDef } from "../ir/types.ts";
+import type { TableDef } from "../ir/types.ts";
 import { toTableVariableName } from "./naming.ts";
 
 /**
@@ -10,7 +10,7 @@ import { toTableVariableName } from "./naming.ts";
  * - import * as schema from "./schema.js"
  * - export const relations = defineRelations(schema, (r) => ({ ... }))
  */
-export function generateRelations(entities: EntityDef[], graph: RelationGraph): string {
+export function generateRelations(tables: TableDef[], graph: RelationGraph): string {
   const lines: string[] = [];
 
   lines.push('import { defineRelations } from "drizzle-orm";');
@@ -18,9 +18,9 @@ export function generateRelations(entities: EntityDef[], graph: RelationGraph): 
   lines.push("");
   lines.push("export const relations = defineRelations(schema, (r) => ({");
 
-  for (const entity of entities) {
-    const tableVar = toTableVariableName(entity.name);
-    const rels = graph.get(entity.name) || [];
+  for (const table of tables) {
+    const tableVar = toTableVariableName(table.name);
+    const rels = graph.get(table.name) || [];
 
     lines.push(`  ${tableVar}: {`);
 
@@ -40,7 +40,7 @@ export function generateRelations(entities: EntityDef[], graph: RelationGraph): 
 function generateRelationEntry(rel: Relation, tableVar: string): string[] {
   switch (rel.kind) {
     case "one": {
-      const targetTableVar = toTableVariableName(rel.toEntity);
+      const targetTableVar = toTableVariableName(rel.toTable);
       return [
         `    ${rel.name}: r.one.${targetTableVar}({`,
         `      from: r.${tableVar}.${rel.fromField},`,
@@ -49,12 +49,12 @@ function generateRelationEntry(rel: Relation, tableVar: string): string[] {
       ];
     }
     case "many": {
-      const manyTableVar = toTableVariableName(rel.entity);
+      const manyTableVar = toTableVariableName(rel.table);
       return [`    ${rel.name}: r.many.${manyTableVar}(),`];
     }
     case "many-through": {
-      const targetTableVar = toTableVariableName(rel.toEntity);
-      const junctionTableVar = toTableVariableName(rel.junction.entity);
+      const targetTableVar = toTableVariableName(rel.toTable);
+      const junctionTableVar = toTableVariableName(rel.junction.table);
       return [
         `    ${rel.name}: r.many.${targetTableVar}({`,
         `      from: r.${tableVar}.${rel.fromField}.through(r.${junctionTableVar}.${rel.junction.fromField}),`,

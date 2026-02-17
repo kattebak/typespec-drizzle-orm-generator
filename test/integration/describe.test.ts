@@ -196,7 +196,7 @@ describe("describe queries (SQLite integration)", () => {
   });
 
   // ===========================================
-  // Returns undefined for non-existent entity
+  // Returns undefined for non-existent record
   // ===========================================
 
   it("returns undefined for non-existent primary key", async () => {

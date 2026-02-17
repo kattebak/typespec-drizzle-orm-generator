@@ -1,13 +1,13 @@
 import type { DecoratorContext, Model, ModelProperty } from "@typespec/compiler";
 import { StateKeys } from "./lib.ts";
 
-export function $entity(
+export function $table(
   context: DecoratorContext,
   target: Model,
   name: string,
   service: string,
 ): void {
-  context.program.stateMap(StateKeys.entity).set(target, { name, service });
+  context.program.stateMap(StateKeys.table).set(target, { name, service });
 }
 
 export function $primaryKey(context: DecoratorContext, target: Model, tableName: string): void {
