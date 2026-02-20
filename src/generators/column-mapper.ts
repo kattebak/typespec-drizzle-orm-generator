@@ -1,88 +1,80 @@
+import { type ChainMethod, chainCall, fnCall, objectLiteral, quoted } from "../codegen/index.ts";
 import type { FieldDef, TableDef } from "../ir/types.ts";
 import { toTableVariableName } from "./naming.ts";
 
-/**
- * Maps a FieldDef to a Drizzle column code string.
- *
- * Examples:
- *   base36Uuid("author_id").primaryKey().defaultRandom()
- *   text("name").notNull()
- *   integer("birth_year")
- *   timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
- */
 export function mapFieldToColumn(field: FieldDef, table: TableDef): string {
-  const parts: string[] = [];
+  const calls: ChainMethod[] = [];
 
-  // Base column type
-  parts.push(mapBaseType(field));
-
-  // Primary key (only for single-column PKs)
   if (isPrimaryKey(field, table)) {
-    parts.push(".primaryKey()");
+    calls.push({ method: "primaryKey" });
   }
 
-  // Auto-generate UUID
   if (field.uuid?.autoGenerate) {
-    parts.push(".defaultRandom()");
+    calls.push({ method: "defaultRandom" });
   }
 
-  // Not null (skip for PK fields — they're implicitly not null)
   if (!field.nullable && !isPrimaryKey(field, table)) {
-    parts.push(".notNull()");
+    calls.push({ method: "notNull" });
   }
 
-  // Foreign key reference
   if (field.references) {
-    parts.push(mapReference(field, table));
+    const targetVar = toTableVariableName(field.references.tableName);
+    const targetField = field.references.fieldName;
+    calls.push({ method: "references", args: [`() => ${targetVar}.${targetField}`] });
   }
 
-  // Timestamp defaults
   if (field.createdAt || field.updatedAt) {
-    parts.push(".defaultNow()");
+    calls.push({ method: "defaultNow" });
   }
 
-  // Single-column unique constraint
   if (field.constraints?.unique) {
-    parts.push(".unique()");
+    calls.push({ method: "unique" });
   }
 
-  // Default value (non-timestamp)
   if (field.defaultValue !== undefined && !field.createdAt && !field.updatedAt) {
-    parts.push(mapDefault(field.defaultValue));
+    calls.push({ method: "default", args: [mapDefault(field.defaultValue)] });
   }
 
-  return parts.join("");
+  return chainCall(mapBaseType(field), calls);
 }
 
 function mapBaseType(field: FieldDef): string {
-  const col = field.columnName;
+  const col = quoted(field.columnName);
 
-  // UUID fields use the custom base36Uuid type
   if (field.uuid) {
-    return `base36Uuid("${col}")`;
+    return fnCall("base36Uuid", [col]);
   }
 
   switch (field.type.kind) {
     case "text":
-      return `text("${col}")`;
+      return fnCall("text", [col]);
     case "varchar":
-      return `varchar("${col}", { length: ${field.type.length} })`;
+      return fnCall("varchar", [
+        col,
+        objectLiteral([["length", String(field.type.length)]], { concise: true }),
+      ]);
     case "integer":
-      return `integer("${col}")`;
+      return fnCall("integer", [col]);
     case "bigint":
-      return `bigint("${col}", { mode: "number" })`;
+      return fnCall("bigint", [
+        col,
+        objectLiteral([["mode", quoted("number")]], { concise: true }),
+      ]);
     case "real":
-      return `real("${col}")`;
+      return fnCall("real", [col]);
     case "doublePrecision":
-      return `doublePrecision("${col}")`;
+      return fnCall("doublePrecision", [col]);
     case "boolean":
-      return `boolean("${col}")`;
+      return fnCall("boolean", [col]);
     case "timestamp":
-      return `timestamp("${col}", { withTimezone: true })`;
+      return fnCall("timestamp", [
+        col,
+        objectLiteral([["withTimezone", "true"]], { concise: true }),
+      ]);
     case "uuid":
-      return `base36Uuid("${col}")`;
+      return fnCall("base36Uuid", [col]);
     case "enum":
-      return `${field.type.enumName}("${col}")`;
+      return fnCall(field.type.enumName, [col]);
   }
 }
 
@@ -90,17 +82,9 @@ function isPrimaryKey(field: FieldDef, table: TableDef): boolean {
   return !table.primaryKey.isComposite && table.primaryKey.columns.includes(field.name);
 }
 
-function mapReference(field: FieldDef, _table: TableDef): string {
-  if (!field.references) return "";
-
-  const targetVar = toTableVariableName(field.references.tableName);
-  const targetField = field.references.fieldName;
-  return `.references(() => ${targetVar}.${targetField})`;
-}
-
 function mapDefault(value: unknown): string {
   if (typeof value === "string") {
-    return `.default("${value}")`;
+    return quoted(value);
   }
-  return `.default(${String(value)})`;
+  return String(value);
 }

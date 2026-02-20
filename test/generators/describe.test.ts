@@ -47,7 +47,7 @@ describe("describe generator", () => {
     assert.ok(output.includes("): Promise<AuthorDescription | undefined> =>"));
     assert.ok(output.includes("  db.query.authors.findFirst({"));
     assert.ok(output.includes("    where: { authorId },"));
-    assert.ok(output.includes("      books: true,"));
+    assert.ok(output.includes("books: true"));
   });
 
   // ===========================================
@@ -71,11 +71,11 @@ describe("describe generator", () => {
     assert.ok(output.includes("): Promise<BookDescription | undefined> =>"));
     assert.ok(output.includes("  db.query.books.findFirst({"));
     assert.ok(output.includes("    where: { bookId },"));
-    assert.ok(output.includes("      author: true,"));
-    assert.ok(output.includes("      editions: true,"));
-    assert.ok(output.includes("      genres: true,"));
-    assert.ok(output.includes("      bookTags: true,"));
-    assert.ok(output.includes("      reviews: true,"));
+    assert.ok(output.includes("author: true"));
+    assert.ok(output.includes("editions: true"));
+    assert.ok(output.includes("genres: true"));
+    assert.ok(output.includes("bookTags: true"));
+    assert.ok(output.includes("reviews: true"));
   });
 
   // ===========================================
@@ -167,9 +167,9 @@ describe("describe generator", () => {
     assert.ok(output.includes("export const describeEdition = ("));
     assert.ok(output.includes("  editionId: string,"));
     assert.ok(output.includes("): Promise<EditionDescription | undefined> =>"));
-    assert.ok(output.includes("      book: true,"));
-    assert.ok(output.includes("      translator: true,"));
-    assert.ok(output.includes("      publisher: true,"));
+    assert.ok(output.includes("book: true"));
+    assert.ok(output.includes("translator: true"));
+    assert.ok(output.includes("publisher: true"));
   });
 
   // ===========================================

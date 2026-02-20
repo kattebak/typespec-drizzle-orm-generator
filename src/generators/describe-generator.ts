@@ -1,22 +1,13 @@
+import { importDecl, objectLiteral } from "../codegen/index.ts";
 import type { Relation, RelationGraph } from "../ir/relation-graph.ts";
 import type { TableDef } from "../ir/types.ts";
 import { toTableVariableName } from "./naming.ts";
 
-/**
- * Generates the complete describe.ts file content from IR + relation graph.
- *
- * For each non-junction table:
- *   1. Generate the Description type alias
- *   2. Generate the describe function using findFirst + with
- *   3. Include all relations from the relation graph
- *
- * Junction tables (isJunction === true) are skipped.
- */
 export function generateDescribe(tables: TableDef[], graph: RelationGraph): string {
   const lines: string[] = [];
 
-  lines.push('import type { DrizzleClient } from "./types.js";');
-  lines.push('import * as schema from "./schema.js";');
+  lines.push(importDecl(["DrizzleClient"], "./types.js", { type: true }));
+  lines.push(importDecl([], "./schema.js", { namespace: "schema" }));
 
   for (const table of tables) {
     if (table.isJunction) continue;
@@ -38,28 +29,29 @@ function generateDescribeBlock(table: TableDef, relations: Relation[]): string[]
   const funcName = `describe${table.name}`;
   const typeName = `${table.name}Description`;
 
-  // Type alias
   lines.push(...generateDescriptionType(table, relations, typeName, tableVar));
 
-  // Function
   lines.push(
     `export const ${funcName} = (`,
     `  db: DrizzleClient,`,
     `  ${pkField}: string,`,
     `): Promise<${typeName} | undefined> =>`,
-    `  db.query.${tableVar}.findFirst({`,
-    `    where: { ${pkField} },`,
   );
 
   if (relations.length > 0) {
-    lines.push("    with: {");
-    for (const rel of relations) {
-      lines.push(`      ${rel.name}: true,`);
-    }
-    lines.push("    },");
+    const withObj = objectLiteral(
+      relations.map((rel) => [rel.name, "true"]),
+      { concise: true },
+    );
+    lines.push(
+      `  db.query.${tableVar}.findFirst({`,
+      `    where: { ${pkField} },`,
+      `    with: ${withObj},`,
+      "  });",
+    );
+  } else {
+    lines.push(`  db.query.${tableVar}.findFirst({`, `    where: { ${pkField} },`, "  });");
   }
-
-  lines.push("  });");
 
   return lines;
 }
