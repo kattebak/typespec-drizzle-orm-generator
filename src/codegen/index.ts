@@ -1,4 +1,4 @@
-export type { ChainMethod } from "./ast-helpers.ts";
+export type { ChainMethod } from "./ast-helpers.js";
 export {
   arrayLiteral,
   arrowFn,
@@ -9,5 +9,5 @@ export {
   importDecl,
   objectLiteral,
   quoted,
-} from "./ast-helpers.ts";
-export { RawCode, stringifyObject } from "./stringify.ts";
+} from "./ast-helpers.js";
+export { RawCode, stringifyObject } from "./stringify.js";

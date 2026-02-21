@@ -1,7 +1,7 @@
-import { importDecl, objectLiteral, RawCode } from "../codegen/index.ts";
-import type { Relation, RelationGraph } from "../ir/relation-graph.ts";
-import type { TableDef } from "../ir/types.ts";
-import { toTableVariableName } from "./naming.ts";
+import { importDecl, objectLiteral, RawCode } from "../codegen/index.js";
+import type { Relation, RelationGraph } from "../ir/relation-graph.js";
+import type { TableDef } from "../ir/types.js";
+import { toTableVariableName } from "./naming.js";
 
 export function generateRelations(tables: TableDef[], graph: RelationGraph): string {
   const lines: string[] = [];

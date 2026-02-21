@@ -1,7 +1,7 @@
 import type { EmitContext } from "@typespec/compiler";
 import { emitFile, resolvePath } from "@typespec/compiler";
-import { assemblePackage } from "./assembler.ts";
-import { buildIR } from "./ir/builder.ts";
+import { assemblePackage } from "./assembler.js";
+import { buildIR } from "./ir/builder.js";
 
 export {
   $check,
@@ -20,8 +20,8 @@ export {
   $updatedAt,
   $uuid,
   $visibility,
-} from "./decorators.ts";
-export { $lib } from "./lib.ts";
+} from "./decorators.js";
+export { $lib } from "./lib.js";
 
 export interface EmitterOptions {
   "package-name"?: string;

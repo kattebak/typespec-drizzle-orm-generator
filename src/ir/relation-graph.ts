@@ -1,5 +1,5 @@
-import { toTableVariableName } from "../generators/naming.ts";
-import type { TableDef } from "./types.ts";
+import { toTableVariableName } from "../generators/naming.js";
+import type { TableDef } from "./types.js";
 
 /** A one-to-one or many-to-one relation (FK holder side) */
 export interface OneRelation {

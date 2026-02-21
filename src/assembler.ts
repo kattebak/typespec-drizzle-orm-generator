@@ -1,10 +1,10 @@
-import { generateDescribe } from "./generators/describe-generator.ts";
-import { generateIndex } from "./generators/index-generator.ts";
-import { generateRelations } from "./generators/relations-generator.ts";
-import { generateSchema } from "./generators/schema-generator.ts";
-import { generateTypes } from "./generators/types-generator.ts";
-import { buildRelationGraph } from "./ir/relation-graph.ts";
-import type { EnumDef, TableDef } from "./ir/types.ts";
+import { generateDescribe } from "./generators/describe-generator.js";
+import { generateIndex } from "./generators/index-generator.js";
+import { generateRelations } from "./generators/relations-generator.js";
+import { generateSchema } from "./generators/schema-generator.js";
+import { generateTypes } from "./generators/types-generator.js";
+import { buildRelationGraph } from "./ir/relation-graph.js";
+import type { EnumDef, TableDef } from "./ir/types.js";
 
 export interface EmitterConfig {
   packageName: string;

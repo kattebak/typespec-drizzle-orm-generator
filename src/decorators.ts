@@ -1,5 +1,5 @@
 import type { DecoratorContext, Model, ModelProperty } from "@typespec/compiler";
-import { StateKeys } from "./lib.ts";
+import { StateKeys } from "./lib.js";
 
 export function $table(
   context: DecoratorContext,

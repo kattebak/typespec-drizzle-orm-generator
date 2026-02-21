@@ -1,4 +1,4 @@
-import { quoted } from "../codegen/index.ts";
+import { quoted } from "../codegen/index.js";
 
 export function generateIndex(): string {
   const lines: string[] = [
