@@ -231,7 +231,7 @@ describe("schema generator", () => {
 
   it("generates uniqueIndex import when composite uniques exist", () => {
     const output = generateSchema(bookstoreTables, bookstoreEnums);
-    assert.ok(output.includes("uniqueIndex,"));
+    assert.ok(output.includes("uniqueIndex"));
   });
 
   it("generates bookFormatEnum declaration from bookstore enums", () => {

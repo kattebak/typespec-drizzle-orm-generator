@@ -1,21 +1,17 @@
-import type { EnumDef, TableDef } from "../ir/types.ts";
+import {
+  arrayLiteral,
+  arrowFn,
+  exportConst,
+  fnCall,
+  formatCode,
+  importDecl,
+  objectLiteral,
+  quoted,
+} from "../codegen/index.ts";
+import type { EnumDef, FieldDef, TableDef } from "../ir/types.ts";
 import { mapFieldToColumn } from "./column-mapper.ts";
 import { toTableVariableName } from "./naming.ts";
 
-/**
- * Generates the complete schema.ts file content from IR.
- *
- * Produces:
- * - Import declarations (drizzle-orm/pg-core + drizzle-orm + ./types.js)
- * - pgEnum() calls for each enum
- * - pgTable() calls for each table
- * - Composite primaryKey() for junction tables
- * - .references() for FK fields
- * - CHECK constraints from @minValue/@maxValue and @check
- * - uniqueIndex() for composite unique constraints
- * - index() for performance indexes
- * - foreignKey() for composite foreign keys
- */
 export function generateSchema(tables: TableDef[], enums: EnumDef[]): string {
   const sections: string[] = [];
 
@@ -36,17 +32,14 @@ function generateImports(tables: TableDef[], enums: EnumDef[]): string {
   const pgCoreImports = collectPgCoreImports(tables, enums);
   const lines: string[] = [];
 
-  lines.push(
-    `import {\n${pgCoreImports.map((i) => `  ${i},`).join("\n")}\n} from "drizzle-orm/pg-core";`,
-  );
+  lines.push(formatCode(importDecl(pgCoreImports, "drizzle-orm/pg-core")));
 
-  // sql import from drizzle-orm (needed for CHECK constraints)
   if (needsSqlImport(tables)) {
-    lines.push('import { sql } from "drizzle-orm";');
+    lines.push(importDecl(["sql"], "drizzle-orm"));
   }
 
   if (hasUuidFields(tables)) {
-    lines.push('import { base36Uuid } from "./types.js";');
+    lines.push(importDecl(["base36Uuid"], "./types.js"));
   }
 
   return lines.join("\n");
@@ -73,17 +66,14 @@ function collectPgCoreImports(tables: TableDef[], enums: EnumDef[]): string[] {
       imports.add("primaryKey");
     }
 
-    // CHECK constraints need "check"
     if (hasCheckConstraints(table)) {
       imports.add("check");
     }
 
-    // Composite unique constraints need "uniqueIndex"
     if (table.uniqueConstraints.length > 0) {
       imports.add("uniqueIndex");
     }
 
-    // Indexes
     for (const idx of table.indexes) {
       if (idx.unique) {
         imports.add("uniqueIndex");
@@ -92,13 +82,12 @@ function collectPgCoreImports(tables: TableDef[], enums: EnumDef[]): string[] {
       }
     }
 
-    // Composite foreign keys
     if (table.foreignKeys.length > 0) {
       imports.add("foreignKey");
     }
 
     for (const field of table.fields) {
-      if (field.uuid) continue; // uuid uses custom type, not pg-core
+      if (field.uuid) continue;
 
       switch (field.type.kind) {
         case "text":
@@ -126,10 +115,7 @@ function collectPgCoreImports(tables: TableDef[], enums: EnumDef[]): string[] {
           imports.add("timestamp");
           break;
         case "uuid":
-          // handled by base36Uuid import
-          break;
         case "enum":
-          // enum types are declared locally
           break;
       }
     }
@@ -139,7 +125,6 @@ function collectPgCoreImports(tables: TableDef[], enums: EnumDef[]): string[] {
     imports.add("pgEnum");
   }
 
-  // Sort for deterministic output
   return [...imports].sort();
 }
 
@@ -157,8 +142,11 @@ function hasUuidFields(tables: TableDef[]): boolean {
 }
 
 function generateEnumDeclaration(enumDef: EnumDef): string {
-  const values = enumDef.values.map((v) => `  "${v}",`).join("\n");
-  return `export const ${enumDef.name} = pgEnum("${enumDef.sqlName}", [\n${values}\n]);`;
+  const values = enumDef.values.map((v) => `  ${quoted(v)},`).join("\n");
+  return exportConst(
+    enumDef.name,
+    `${fnCall("pgEnum", [quoted(enumDef.sqlName), `[\n${values}\n]`])}`,
+  );
 }
 
 function generateTableDeclaration(table: TableDef): string {
@@ -170,42 +158,47 @@ function generateTableDeclaration(table: TableDef): string {
     return generateTableWithExtras(table, varName, columns, extras);
   }
 
-  return `export const ${varName} = pgTable("${table.tableName}", {\n${columns}\n});`;
+  return exportConst(varName, fnCall("pgTable", [quoted(table.tableName), columns]));
+}
+
+function generateTableWithExtras(
+  table: TableDef,
+  varName: string,
+  columns: string,
+  extras: string[],
+): string {
+  return [
+    `export const ${varName} = pgTable(`,
+    `  ${quoted(table.tableName)},`,
+    `${columns
+      .split("\n")
+      .map((line) => `  ${line}`)
+      .join("\n")},`,
+    `  ${arrowFn(["table"], `[\n${extras.join(",\n")},\n  ]`)},`,
+    `);`,
+  ].join("\n");
 }
 
 function generateColumns(table: TableDef): string {
-  const lines: string[] = [];
-
-  for (const field of table.fields) {
-    const columnCode = mapFieldToColumn(field, table);
-    lines.push(`  ${field.name}: ${columnCode},`);
-  }
-
-  return lines.join("\n");
+  const lines = table.fields.map((field) => `  ${field.name}: ${mapFieldToColumn(field, table)},`);
+  return `{\n${lines.join("\n")}\n}`;
 }
 
-/**
- * Collects all table-level extras: composite PK, CHECK constraints,
- * unique indexes, indexes, and composite foreign keys.
- */
 function generateTableExtras(table: TableDef): string[] {
   const extras: string[] = [];
 
-  // Composite PK
   if (table.primaryKey.isComposite) {
-    const pkColumns = table.primaryKey.columns.map((col) => `table.${col}`).join(", ");
-    const pkName = `${table.tableName}_pk`;
-    extras.push(
+    const pkColumns = table.primaryKey.columns.map((col) => `table.${col}`);
+    const pkObj = objectLiteral(
       [
-        `    primaryKey({`,
-        `      name: "${pkName}",`,
-        `      columns: [${pkColumns}],`,
-        `    })`,
-      ].join("\n"),
+        ["name", quoted(`${table.tableName}_pk`)],
+        ["columns", arrayLiteral(pkColumns)],
+      ],
+      { concise: true },
     );
+    extras.push(`    ${fnCall("primaryKey", [pkObj])}`);
   }
 
-  // CHECK constraints from @minValue/@maxValue
   for (const field of table.fields) {
     if (field.constraints?.minValue !== undefined || field.constraints?.maxValue !== undefined) {
       extras.push(generateRangeCheck(table, field));
@@ -215,42 +208,36 @@ function generateTableExtras(table: TableDef): string[] {
     }
   }
 
-  // Composite unique constraints
   for (const uq of table.uniqueConstraints) {
-    const cols = uq.columns.map((c) => `table.${c}`).join(", ");
-    extras.push(`    uniqueIndex("${uq.name}").on(${cols})`);
+    const cols = uq.columns.map((c) => `table.${c}`);
+    extras.push(`    ${fnCall("uniqueIndex", [quoted(uq.name)])}.on(${cols.join(", ")})`);
   }
 
-  // Indexes
   for (const idx of table.indexes) {
-    const cols = idx.columns.map((c) => `table.${c}`).join(", ");
-    if (idx.unique) {
-      extras.push(`    uniqueIndex("${idx.name}").on(${cols})`);
-    } else {
-      extras.push(`    index("${idx.name}").on(${cols})`);
-    }
+    const cols = idx.columns.map((c) => `table.${c}`);
+    const idxFn = idx.unique ? "uniqueIndex" : "index";
+    extras.push(`    ${fnCall(idxFn, [quoted(idx.name)])}.on(${cols.join(", ")})`);
   }
 
-  // Composite foreign keys
   for (const fk of table.foreignKeys) {
-    const localCols = fk.columns.map((c) => `table.${c}`).join(", ");
+    const localCols = fk.columns.map((c) => `table.${c}`);
     const foreignVar = toTableVariableName(fk.foreignTable);
-    const foreignCols = fk.foreignColumns.map((c) => `${foreignVar}.${c}`).join(", ");
-    extras.push(
+    const foreignCols = fk.foreignColumns.map((c) => `${foreignVar}.${c}`);
+    const fkObj = objectLiteral(
       [
-        `    foreignKey({`,
-        `      name: "${fk.name}",`,
-        `      columns: [${localCols}],`,
-        `      foreignColumns: [${foreignCols}],`,
-        `    })`,
-      ].join("\n"),
+        ["name", quoted(fk.name)],
+        ["columns", arrayLiteral(localCols)],
+        ["foreignColumns", arrayLiteral(foreignCols)],
+      ],
+      { concise: true },
     );
+    extras.push(`    ${fnCall("foreignKey", [fkObj])}`);
   }
 
   return extras;
 }
 
-function generateRangeCheck(table: TableDef, field: import("../ir/types.ts").FieldDef): string {
+function generateRangeCheck(table: TableDef, field: FieldDef): string {
   const conditions: string[] = [];
 
   if (field.constraints?.minValue !== undefined) {
@@ -263,34 +250,12 @@ function generateRangeCheck(table: TableDef, field: import("../ir/types.ts").Fie
   const expr = conditions.join(" AND ");
   const checkName = `${table.tableName}_${field.columnName}_check`;
 
-  return `    check("${checkName}", sql\`${expr}\`)`;
+  return `    ${fnCall("check", [quoted(checkName), `sql\`${expr}\``])}`;
 }
 
-function generateFieldCheck(table: TableDef, field: import("../ir/types.ts").FieldDef): string {
+function generateFieldCheck(table: TableDef, field: FieldDef): string {
   const checkName = `${table.tableName}_${field.columnName}_check`;
   const expr = field.constraints?.check ?? "";
 
-  return `    check("${checkName}", sql\`${expr}\`)`;
-}
-
-function generateTableWithExtras(
-  table: TableDef,
-  varName: string,
-  columns: string,
-  extras: string[],
-): string {
-  return [
-    `export const ${varName} = pgTable(`,
-    `  "${table.tableName}",`,
-    `  {`,
-    columns
-      .split("\n")
-      .map((line) => `  ${line}`)
-      .join("\n"),
-    `  },`,
-    `  (table) => [`,
-    `${extras.join(",\n")},`,
-    `  ],`,
-    `);`,
-  ].join("\n");
+  return `    ${fnCall("check", [quoted(checkName), `sql\`${expr}\``])}`;
 }

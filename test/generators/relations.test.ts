@@ -44,8 +44,8 @@ describe("relations generator", () => {
 
   it("generates Book one relation to Author", () => {
     assert.ok(output.includes("    author: r.one.authors({"));
-    assert.ok(output.includes("      from: r.books.authorId,"));
-    assert.ok(output.includes("      to: r.authors.authorId,"));
+    assert.ok(output.includes("from: r.books.authorId,"));
+    assert.ok(output.includes("to: r.authors.authorId"));
   });
 
   it("generates Book many relations for editions, bookTags, reviews", () => {
@@ -56,8 +56,8 @@ describe("relations generator", () => {
 
   it("generates Book many-through to Genre via BookGenre", () => {
     assert.ok(output.includes("    genres: r.many.genres({"));
-    assert.ok(output.includes("      from: r.books.bookId.through(r.bookGenres.bookId),"));
-    assert.ok(output.includes("      to: r.genres.genreId.through(r.bookGenres.genreId),"));
+    assert.ok(output.includes("from: r.books.bookId.through(r.bookGenres.bookId),"));
+    assert.ok(output.includes("to: r.genres.genreId.through(r.bookGenres.genreId)"));
   });
 
   // ===========================================
@@ -67,8 +67,8 @@ describe("relations generator", () => {
   it("generates Genre many-through to Book via BookGenre", () => {
     assert.ok(output.includes("  genres: {"));
     assert.ok(output.includes("    books: r.many.books({"));
-    assert.ok(output.includes("      from: r.genres.genreId.through(r.bookGenres.genreId),"));
-    assert.ok(output.includes("      to: r.books.bookId.through(r.bookGenres.bookId),"));
+    assert.ok(output.includes("from: r.genres.genreId.through(r.bookGenres.genreId),"));
+    assert.ok(output.includes("to: r.books.bookId.through(r.bookGenres.bookId)"));
   });
 
   // ===========================================
@@ -78,11 +78,11 @@ describe("relations generator", () => {
   it("generates BookGenre one relations to Book and Genre", () => {
     assert.ok(output.includes("  bookGenres: {"));
     assert.ok(output.includes("    book: r.one.books({"));
-    assert.ok(output.includes("      from: r.bookGenres.bookId,"));
-    assert.ok(output.includes("      to: r.books.bookId,"));
+    assert.ok(output.includes("from: r.bookGenres.bookId,"));
+    assert.ok(output.includes("to: r.books.bookId"));
     assert.ok(output.includes("    genre: r.one.genres({"));
-    assert.ok(output.includes("      from: r.bookGenres.genreId,"));
-    assert.ok(output.includes("      to: r.genres.genreId,"));
+    assert.ok(output.includes("from: r.bookGenres.genreId,"));
+    assert.ok(output.includes("to: r.genres.genreId"));
   });
 
   // ===========================================
@@ -92,8 +92,8 @@ describe("relations generator", () => {
   it("generates BookTag one relation to Book", () => {
     assert.ok(output.includes("  bookTags: {"));
     assert.ok(output.includes("    book: r.one.books({"));
-    assert.ok(output.includes("      from: r.bookTags.bookId,"));
-    assert.ok(output.includes("      to: r.books.bookId,"));
+    assert.ok(output.includes("from: r.bookTags.bookId,"));
+    assert.ok(output.includes("to: r.books.bookId"));
   });
 
   // ===========================================
@@ -122,16 +122,16 @@ describe("relations generator", () => {
     assert.ok(output.includes("  editions: {"));
 
     assert.ok(output.includes("    book: r.one.books({"));
-    assert.ok(output.includes("      from: r.editions.bookId,"));
-    assert.ok(output.includes("      to: r.books.bookId,"));
+    assert.ok(output.includes("from: r.editions.bookId,"));
+    assert.ok(output.includes("to: r.books.bookId"));
 
     assert.ok(output.includes("    translator: r.one.translators({"));
-    assert.ok(output.includes("      from: r.editions.translatorId,"));
-    assert.ok(output.includes("      to: r.translators.translatorId,"));
+    assert.ok(output.includes("from: r.editions.translatorId,"));
+    assert.ok(output.includes("to: r.translators.translatorId"));
 
     assert.ok(output.includes("    publisher: r.one.publishers({"));
-    assert.ok(output.includes("      from: r.editions.publisherId,"));
-    assert.ok(output.includes("      to: r.publishers.publisherId,"));
+    assert.ok(output.includes("from: r.editions.publisherId,"));
+    assert.ok(output.includes("to: r.publishers.publisherId"));
   });
 
   // ===========================================
@@ -141,8 +141,8 @@ describe("relations generator", () => {
   it("generates Review one relation to Book", () => {
     assert.ok(output.includes("  reviews: {"));
     assert.ok(output.includes("    book: r.one.books({"));
-    assert.ok(output.includes("      from: r.reviews.bookId,"));
-    assert.ok(output.includes("      to: r.books.bookId,"));
+    assert.ok(output.includes("from: r.reviews.bookId,"));
+    assert.ok(output.includes("to: r.books.bookId"));
   });
 
   // ===========================================

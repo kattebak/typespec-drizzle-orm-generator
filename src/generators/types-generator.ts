@@ -1,28 +1,31 @@
-/**
- * Generates the types.ts file content.
- *
- * Contains:
- * - base36Uuid custom type (native pg uuid, marshaled to/from base36)
- * - DrizzleClient type alias for describe function signatures
- */
+import { exportConst, fnCall, importDecl, quoted } from "../codegen/index.ts";
+
 export function generateTypes(): string {
-  return `import { customType } from "drizzle-orm/pg-core";
-import short from "short-uuid";
-import type { relations } from "./relations.js";
+  const sections: string[] = [];
 
-const translator = short(short.constants.uuid25Base36);
+  sections.push(importDecl(["customType"], "drizzle-orm/pg-core"));
+  sections.push(`import short from ${quoted("short-uuid")};`);
+  sections.push(importDecl(["relations"], "./relations.js", { type: true }));
+  sections.push("");
 
-/** UUID column that stores as native pg uuid, reads/writes as base36 */
-export const base36Uuid = customType<{
-  data: string;
-  driverData: string;
-}>({
-  dataType: () => "uuid",
-  toDriver: (value: string): string => translator.toUUID(value),
-  fromDriver: (value: string): string => translator.fromUUID(value),
-});
+  sections.push(`const translator = ${fnCall("short", ["short.constants.uuid25Base36"])};`);
+  sections.push("");
 
-/** Drizzle client type for use in describe function signatures */
-export type DrizzleClient = Parameters<typeof relations.applyTo>[0];
-`;
+  sections.push("/** UUID column that stores as native pg uuid, reads/writes as base36 */");
+  const typeParam = "<{\n  data: string;\n  driverData: string;\n}>";
+  const configObj = [
+    "{",
+    '  dataType: () => "uuid",',
+    "  toDriver: (value: string): string => translator.toUUID(value),",
+    "  fromDriver: (value: string): string => translator.fromUUID(value),",
+    "}",
+  ].join("\n");
+  sections.push(exportConst("base36Uuid", `customType${typeParam}(${configObj})`));
+  sections.push("");
+
+  sections.push("/** Drizzle client type for use in describe function signatures */");
+  sections.push("export type DrizzleClient = Parameters<typeof relations.applyTo>[0];");
+  sections.push("");
+
+  return sections.join("\n");
 }

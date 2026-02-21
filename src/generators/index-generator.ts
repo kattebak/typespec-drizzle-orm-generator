@@ -1,12 +1,13 @@
-/**
- * Generates the index.ts barrel file content.
- *
- * Re-exports all public symbols from the generated package.
- */
+import { quoted } from "../codegen/index.ts";
+
 export function generateIndex(): string {
-  return `export * from "./types.js";
-export * from "./schema.js";
-export { relations } from "./relations.js";
-export * from "./describe.js";
-`;
+  const lines: string[] = [
+    `export * from ${quoted("./types.js")};`,
+    `export * from ${quoted("./schema.js")};`,
+    `export { relations } from ${quoted("./relations.js")};`,
+    `export * from ${quoted("./describe.js")};`,
+    "",
+  ];
+
+  return lines.join("\n");
 }
