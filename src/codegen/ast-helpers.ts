@@ -1,7 +1,7 @@
 import { generate } from "@babel/generator";
 import { parse, parseExpression } from "@babel/parser";
 import type { ObjectExpression } from "@babel/types";
-import { RawCode } from "./stringify.ts";
+import { RawCode } from "./stringify.js";
 
 function isObjectExpression(node: unknown): node is ObjectExpression {
   return (

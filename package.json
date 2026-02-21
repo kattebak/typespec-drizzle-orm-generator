@@ -24,8 +24,9 @@
     "lint": "biome check .",
     "fix": "biome check --write .",
     "format": "biome format --write .",
-    "test": "node --test --experimental-strip-types 'test/**/*.test.ts'",
-    "pretest": "npm run check"
+    "test": "node --test --import=tsx 'test/**/*.test.ts'",
+    "pretest": "npm run check",
+    "prepublishOnly": "npm run build"
   },
   "devDependencies": {
     "@babel/generator": "^7.29.1",
@@ -37,7 +38,8 @@
     "@typescript/native-preview": "latest",
     "@typespec/compiler": "^1.9.0",
     "better-sqlite3": "^12.6.2",
-    "drizzle-orm": "^1.0.0-beta.15-859cf75"
+    "drizzle-orm": "^1.0.0-beta.15-859cf75",
+    "tsx": "^4.21.0"
   },
   "publishConfig": {
     "access": "public"

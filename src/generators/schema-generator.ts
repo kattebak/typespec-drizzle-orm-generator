@@ -7,10 +7,10 @@ import {
   importDecl,
   objectLiteral,
   quoted,
-} from "../codegen/index.ts";
-import type { EnumDef, FieldDef, TableDef } from "../ir/types.ts";
-import { mapFieldToColumn } from "./column-mapper.ts";
-import { toTableVariableName } from "./naming.ts";
+} from "../codegen/index.js";
+import type { EnumDef, FieldDef, TableDef } from "../ir/types.js";
+import { mapFieldToColumn } from "./column-mapper.js";
+import { toTableVariableName } from "./naming.js";
 
 export function generateSchema(tables: TableDef[], enums: EnumDef[]): string {
   const sections: string[] = [];

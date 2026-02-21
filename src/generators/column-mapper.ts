@@ -1,6 +1,6 @@
-import { type ChainMethod, chainCall, fnCall, objectLiteral, quoted } from "../codegen/index.ts";
-import type { FieldDef, TableDef } from "../ir/types.ts";
-import { toTableVariableName } from "./naming.ts";
+import { type ChainMethod, chainCall, fnCall, objectLiteral, quoted } from "../codegen/index.js";
+import type { FieldDef, TableDef } from "../ir/types.js";
+import { toTableVariableName } from "./naming.js";
 
 export function mapFieldToColumn(field: FieldDef, table: TableDef): string {
   const calls: ChainMethod[] = [];

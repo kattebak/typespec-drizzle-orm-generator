@@ -1,6 +1,6 @@
 import type { Model, ModelProperty, Scalar } from "@typespec/compiler";
-import { toSnakeCase } from "../generators/naming.ts";
-import { StateKeys } from "../lib.ts";
+import { toSnakeCase } from "../generators/naming.js";
+import { StateKeys } from "../lib.js";
 import type {
   EnumDef,
   FieldDef,
@@ -10,7 +10,7 @@ import type {
   TableDef,
   UniqueConstraintDef,
   UuidEncoding,
-} from "./types.ts";
+} from "./types.js";
 
 interface TableMeta {
   name: string;

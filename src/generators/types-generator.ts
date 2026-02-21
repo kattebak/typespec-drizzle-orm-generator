@@ -1,4 +1,4 @@
-import { exportConst, fnCall, importDecl, quoted } from "../codegen/index.ts";
+import { exportConst, fnCall, importDecl, quoted } from "../codegen/index.js";
 
 export function generateTypes(): string {
   const sections: string[] = [];

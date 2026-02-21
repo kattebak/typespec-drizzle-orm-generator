@@ -90,7 +90,8 @@ if (!field) {
 
 ## Code Style
 
-- Use `.ts` extensions for all local imports (ESM with `--experimental-strip-types`)
+- Use `.js` extensions for all local imports in `src/` (ESM, required for `tsgo` emit)
+- Test files may use `.ts` extensions when importing from `src/` (tsx loader resolves them)
 - Return early, avoid nested else statements
 - No comments except for complex business logic or non-obvious workarounds
 - Use `function` declarations for named exports; arrow functions for callbacks and inline use
@@ -136,7 +137,7 @@ test/integration/       # End-to-end generator tests with real SQLite
 
 ### Test Runner
 
-- `node:test` with `--experimental-strip-types` (no transpile step)
+- `node:test` with `tsx` loader (`--import=tsx`)
 - `better-sqlite3` for integration tests (in-memory SQLite)
 
 ### Scripts
@@ -145,7 +146,7 @@ test/integration/       # End-to-end generator tests with real SQLite
 {
   "scripts": {
     "check": "tsgo --noEmit",
-    "test": "node --test --experimental-strip-types 'test/**/*.test.ts'",
+    "test": "node --test --import=tsx 'test/**/*.test.ts'",
     "pretest": "npm run check"
   }
 }
@@ -155,10 +156,10 @@ Run: `npm test` (type check + run)
 
 ## Toolchain
 
-- `tsgo` for type checking (`tsgo --noEmit`)
+- `tsgo` for type checking (`tsgo --noEmit`) and building (`tsgo --project tsconfig.build.json`)
 - `biome` for linting and formatting (`biome check .`, `biome check --write .`)
-- Node >= 22 with `--experimental-strip-types` for runtime
-- `allowImportingTsExtensions: true` + `noEmit: true` in tsconfig
+- `tsx` loader for runtime TypeScript (resolves `.js` → `.ts` imports)
+- `noEmit: true` in base tsconfig; `tsconfig.build.json` overrides to `noEmit: false` for emit
 
 ## IDE Diagnostics
 
