@@ -94,7 +94,7 @@ export function buildIR(program: ProgramStateAccess): {
   const foreignKeyDefState = program.stateMap(StateKeys.foreignKeyDef);
   const minValueState = program.stateMap(StateKeys.minValue);
   const maxValueState = program.stateMap(StateKeys.maxValue);
-  const visibilityState = program.stateMap(StateKeys.visibility);
+  const visibilityState = program.stateMap(StateKeys.columnVisibility);
 
   for (const [target, meta] of tableState) {
     const model = target as Model;
