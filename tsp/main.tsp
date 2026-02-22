@@ -1,4 +1,4 @@
-import "../dist/lib.js";
+import "../dist/index.js";
 
 using TypeSpec.Reflection;
 
