@@ -5,6 +5,7 @@ import { buildIR } from "./ir/builder.js";
 
 export {
   $check,
+  $columnVisibility,
   $compositeUnique,
   $createdAt,
   $foreignKeyDef,
@@ -19,7 +20,6 @@ export {
   $unique,
   $updatedAt,
   $uuid,
-  $visibility,
 } from "./decorators.js";
 export { $lib } from "./lib.js";
 

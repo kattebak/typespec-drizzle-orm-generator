@@ -15,6 +15,11 @@
     "dist",
     "src/decorators.tsp"
   ],
+  "dependencies": {
+    "@babel/generator": "^7.29.1",
+    "@babel/parser": "^7.29.0",
+    "@babel/types": "^7.29.0"
+  },
   "peerDependencies": {
     "@typespec/compiler": ">=1.0.0"
   },
@@ -29,9 +34,6 @@
     "prepublishOnly": "npm run build"
   },
   "devDependencies": {
-    "@babel/generator": "^7.29.1",
-    "@babel/parser": "^7.29.0",
-    "@babel/types": "^7.29.0",
     "@biomejs/biome": "^2.0.0",
     "@types/babel__generator": "^7.27.0",
     "@types/better-sqlite3": "^7.6.13",

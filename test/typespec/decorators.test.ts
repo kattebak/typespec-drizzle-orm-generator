@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 import type { DecoratorContext, Model, ModelProperty } from "@typespec/compiler";
 import {
   $check,
+  $columnVisibility,
   $compositeUnique,
   $createdAt,
   $foreignKeyDef,
@@ -17,7 +18,6 @@ import {
   $unique,
   $updatedAt,
   $uuid,
-  $visibility,
 } from "../../src/decorators.ts";
 import { StateKeys } from "../../src/lib.ts";
 
@@ -413,17 +413,17 @@ describe("decorator functions", () => {
   });
 
   // ===========================================
-  // @visibility
+  // @columnVisibility
   // ===========================================
 
-  it("$visibility stores value in visibility state map", () => {
+  it("$columnVisibility stores value in columnVisibility state map", () => {
     const program = createMockProgram();
     const ctx = createMockContext(program);
     const prop = mockProp("createdAt");
 
-    $visibility(ctx, prop, "read");
+    $columnVisibility(ctx, prop, "read");
 
-    const stored = program.stateMap(StateKeys.visibility).get(prop);
+    const stored = program.stateMap(StateKeys.columnVisibility).get(prop);
     assert.equal(stored, "read");
   });
 });

@@ -19,7 +19,7 @@ export const $lib = createTypeSpecLibrary({
     foreignKeyDef: { description: "State for @foreignKey decorator" },
     minValue: { description: "State for @minValue decorator" },
     maxValue: { description: "State for @maxValue decorator" },
-    visibility: { description: "State for @visibility decorator" },
+    columnVisibility: { description: "State for @columnVisibility decorator" },
   },
 } as const);
 

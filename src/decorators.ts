@@ -113,6 +113,10 @@ export function $maxValue(context: DecoratorContext, target: ModelProperty, valu
   context.program.stateMap(StateKeys.maxValue).set(target, value);
 }
 
-export function $visibility(context: DecoratorContext, target: ModelProperty, value: string): void {
-  context.program.stateMap(StateKeys.visibility).set(target, value);
+export function $columnVisibility(
+  context: DecoratorContext,
+  target: ModelProperty,
+  value: string,
+): void {
+  context.program.stateMap(StateKeys.columnVisibility).set(target, value);
 }

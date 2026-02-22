@@ -1,4 +1,4 @@
-import "./lib.js";
+import "../dist/lib.js";
 
 using TypeSpec.Reflection;
 
@@ -19,4 +19,4 @@ extern dec indexDef(target: Model, name: valueof string, columns: ModelProperty[
 extern dec foreignKeyDef(target: Model, name: valueof string, columns: ModelProperty[], foreignColumns: ModelProperty[]);
 extern dec minValue(target: ModelProperty, value: valueof int32);
 extern dec maxValue(target: ModelProperty, value: valueof int32);
-extern dec visibility(target: ModelProperty, value: valueof string);
+extern dec columnVisibility(target: ModelProperty, value: valueof string);
