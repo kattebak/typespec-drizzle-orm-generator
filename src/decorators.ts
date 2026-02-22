@@ -1,9 +1,4 @@
-import {
-  type DecoratorContext,
-  type Model,
-  type ModelProperty,
-  setTypeSpecNamespace,
-} from "@typespec/compiler";
+import type { DecoratorContext, Model, ModelProperty } from "@typespec/compiler";
 import { StateKeys } from "./lib.js";
 
 export function $table(
@@ -125,23 +120,3 @@ export function $columnVisibility(
 ): void {
   context.program.stateMap(StateKeys.columnVisibility).set(target, value);
 }
-
-setTypeSpecNamespace(
-  "DrizzleEmitter",
-  $table,
-  $primaryKey,
-  $pk,
-  $references,
-  $junction,
-  $uuid,
-  $createdAt,
-  $updatedAt,
-  $unique,
-  $compositeUnique,
-  $check,
-  $indexDef,
-  $foreignKeyDef,
-  $minValue,
-  $maxValue,
-  $columnVisibility,
-);

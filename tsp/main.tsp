@@ -2,8 +2,6 @@ import "../dist/index.js";
 
 using TypeSpec.Reflection;
 
-namespace DrizzleEmitter;
-
 extern dec table(target: Model, name: valueof string, service: valueof string);
 extern dec primaryKey(target: Model, tableName: valueof string);
 extern dec pk(target: ModelProperty);
