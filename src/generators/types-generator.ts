@@ -1,9 +1,10 @@
 import { exportConst, fnCall, importDecl, quoted } from "../codegen/index.js";
+import type { DialectConfig } from "./dialect.js";
 
-export function generateTypes(): string {
+export function generateTypes(dialect: DialectConfig): string {
   const sections: string[] = [];
 
-  sections.push(importDecl(["customType"], "drizzle-orm/pg-core"));
+  sections.push(importDecl(["customType"], dialect.coreModule));
   sections.push(`import short from ${quoted("short-uuid")};`);
   sections.push(importDecl(["relations"], "./relations.js", { type: true }));
   sections.push("");
@@ -11,11 +12,15 @@ export function generateTypes(): string {
   sections.push(`const translator = ${fnCall("short", ["short.constants.uuid25Base36"])};`);
   sections.push("");
 
-  sections.push("/** UUID column that stores as native pg uuid, reads/writes as base36 */");
+  const comment =
+    dialect.dialect === "sqlite"
+      ? "/** UUID column stored as text, reads/writes as base36 */"
+      : "/** UUID column that stores as native pg uuid, reads/writes as base36 */";
+  sections.push(comment);
   const typeParam = "<{\n  data: string;\n  driverData: string;\n}>";
   const configObj = [
     "{",
-    '  dataType: () => "uuid",',
+    `  dataType: () => ${quoted(dialect.uuidDataType)},`,
     "  toDriver: (value: string): string => translator.toUUID(value),",
     "  fromDriver: (value: string): string => translator.fromUUID(value),",
     "}",

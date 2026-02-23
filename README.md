@@ -1,6 +1,6 @@
 # typespec-drizzle-orm-generator
 
-Generate a complete [Drizzle ORM](https://orm.drizzle.team/) package from TypeSpec models. You define your domain in TypeSpec, the emitter gives you table schemas, relations, and typed query functions for PostgreSQL.
+Generate a complete [Drizzle ORM](https://orm.drizzle.team/) package from TypeSpec models. You define your domain in TypeSpec, the emitter gives you table schemas, relations, and typed query functions. Supports PostgreSQL (default) and SQLite dialects.
 
 ## Install
 
@@ -60,6 +60,7 @@ options:
   "@kattebak/typespec-drizzle-orm-generator":
     "package-name": "@myorg/bookstore-db"
     "package-version": "1.0.0"
+    dialect: pg          # "pg" (default) or "sqlite"
 ```
 
 Then compile:
@@ -70,9 +71,9 @@ npx tsp compile .
 
 The emitter produces 6 files as a ready-to-use npm package:
 
-| File           | What's in it                                                         |
-| -------------- | -------------------------------------------------------------------- |
-| `schema.ts`    | `pgTable()` definitions, `pgEnum()`, constraints                     |
+| File           | What's in it                                                           |
+| -------------- | ---------------------------------------------------------------------- |
+| `schema.ts`    | Table definitions (`pgTable`/`sqliteTable`), enums, constraints        |
 | `relations.ts` | `defineRelations()` with `through()` for many-to-many                |
 | `describe.ts`  | One typed query function per entity (fetch by PK with all relations) |
 | `types.ts`     | `base36Uuid` custom type, `DrizzleClient` type alias                 |
@@ -284,7 +285,27 @@ export type EditionDescription = typeof schema.editions.$inferSelect & {
 };
 ```
 
-## Type mapping
+## Dialect option
+
+Set `dialect` in your `tspconfig.yaml` to control the target database. Defaults to `pg`.
+
+| Value    | Table function  | Import source             | Enum support |
+| -------- | --------------- | ------------------------- | ------------ |
+| `pg`     | `pgTable`       | `drizzle-orm/pg-core`     | `pgEnum()`   |
+| `sqlite` | `sqliteTable`   | `drizzle-orm/sqlite-core` | mapped to `text()` |
+
+When using `sqlite`, types that don't exist natively in SQLite are mapped to compatible alternatives:
+
+| TypeSpec type | PostgreSQL                          | SQLite                                  |
+| ------------- | ----------------------------------- | --------------------------------------- |
+| `boolean`     | `boolean()`                         | `integer({ mode: "boolean" })`          |
+| `utcDateTime` | `timestamp({ withTimezone: true })` | `integer({ mode: "timestamp" })`        |
+| `float64`     | `doublePrecision()`                 | `real()`                                |
+| `int64`       | `bigint({ mode: "number" })`        | `integer({ mode: "number" })`           |
+| `string` (with length) | `varchar({ length })`     | `text({ length })`                      |
+| TypeSpec `enum` | `pgEnum()`                        | `text()` (no native enums in SQLite)    |
+
+## Type mapping (PostgreSQL)
 
 | TypeSpec               | Drizzle                             | PostgreSQL                |
 | ---------------------- | ----------------------------------- | ------------------------- |
@@ -307,7 +328,7 @@ See [test/fixtures/bookstore.tsp](test/fixtures/bookstore.tsp) for a complete 9-
 
 ```bash
 npm install
-npm test            # type-check + 230 tests
+npm test            # type-check + 298 tests
 npm run lint:fix    # auto-fix with Biome
 ```
 

@@ -10,29 +10,36 @@ import {
 } from "../codegen/index.js";
 import type { EnumDef, FieldDef, TableDef } from "../ir/types.js";
 import { mapFieldToColumn } from "./column-mapper.js";
+import type { DialectConfig } from "./dialect.js";
 import { toTableVariableName } from "./naming.js";
 
-export function generateSchema(tables: TableDef[], enums: EnumDef[]): string {
+export function generateSchema(
+  tables: TableDef[],
+  enums: EnumDef[],
+  dialect: DialectConfig,
+): string {
   const sections: string[] = [];
 
-  sections.push(generateImports(tables, enums));
+  sections.push(generateImports(tables, enums, dialect));
 
-  for (const enumDef of enums) {
-    sections.push(generateEnumDeclaration(enumDef));
+  if (dialect.enumFn) {
+    for (const enumDef of enums) {
+      sections.push(generateEnumDeclaration(enumDef, dialect.enumFn));
+    }
   }
 
   for (const table of tables) {
-    sections.push(generateTableDeclaration(table));
+    sections.push(generateTableDeclaration(table, dialect));
   }
 
   return `${sections.join("\n\n")}\n`;
 }
 
-function generateImports(tables: TableDef[], enums: EnumDef[]): string {
-  const pgCoreImports = collectPgCoreImports(tables, enums);
+function generateImports(tables: TableDef[], enums: EnumDef[], dialect: DialectConfig): string {
+  const coreImports = collectCoreImports(tables, enums, dialect);
   const lines: string[] = [];
 
-  lines.push(formatCode(importDecl(pgCoreImports, "drizzle-orm/pg-core")));
+  lines.push(formatCode(importDecl(coreImports, dialect.coreModule)));
 
   if (needsSqlImport(tables)) {
     lines.push(importDecl(["sql"], "drizzle-orm"));
@@ -56,10 +63,14 @@ function needsSqlImport(tables: TableDef[]): boolean {
   );
 }
 
-function collectPgCoreImports(tables: TableDef[], enums: EnumDef[]): string[] {
+function collectCoreImports(
+  tables: TableDef[],
+  enums: EnumDef[],
+  dialect: DialectConfig,
+): string[] {
   const imports = new Set<string>();
 
-  imports.add("pgTable");
+  imports.add(dialect.tableFn);
 
   for (const table of tables) {
     if (table.primaryKey.isComposite) {
@@ -89,43 +100,60 @@ function collectPgCoreImports(tables: TableDef[], enums: EnumDef[]): string[] {
     for (const field of table.fields) {
       if (field.uuid) continue;
 
-      switch (field.type.kind) {
-        case "text":
-          imports.add("text");
-          break;
-        case "varchar":
-          imports.add("varchar");
-          break;
-        case "integer":
-          imports.add("integer");
-          break;
-        case "bigint":
-          imports.add("bigint");
-          break;
-        case "real":
-          imports.add("real");
-          break;
-        case "doublePrecision":
-          imports.add("doublePrecision");
-          break;
-        case "boolean":
-          imports.add("boolean");
-          break;
-        case "timestamp":
-          imports.add("timestamp");
-          break;
-        case "uuid":
-        case "enum":
-          break;
+      for (const imp of collectFieldImports(field, dialect)) {
+        imports.add(imp);
       }
     }
   }
 
-  if (enums.length > 0) {
-    imports.add("pgEnum");
+  if (enums.length > 0 && dialect.enumFn) {
+    imports.add(dialect.enumFn);
   }
 
   return [...imports].sort();
+}
+
+function collectFieldImports(field: FieldDef, dialect: DialectConfig): string[] {
+  if (dialect.dialect === "sqlite") {
+    switch (field.type.kind) {
+      case "text":
+      case "varchar":
+      case "enum":
+        return ["text"];
+      case "integer":
+      case "bigint":
+      case "boolean":
+      case "timestamp":
+        return ["integer"];
+      case "real":
+      case "doublePrecision":
+        return ["real"];
+      case "uuid":
+        return [];
+    }
+  }
+
+  switch (field.type.kind) {
+    case "text":
+      return ["text"];
+    case "varchar":
+      return ["varchar"];
+    case "integer":
+      return ["integer"];
+    case "bigint":
+      return ["bigint"];
+    case "real":
+      return ["real"];
+    case "doublePrecision":
+      return ["doublePrecision"];
+    case "boolean":
+      return ["boolean"];
+    case "timestamp":
+      return ["timestamp"];
+    case "uuid":
+    case "enum":
+      return [];
+  }
 }
 
 function hasCheckConstraints(table: TableDef): boolean {
@@ -141,24 +169,24 @@ function hasUuidFields(tables: TableDef[]): boolean {
   return tables.some((t) => t.fields.some((f) => f.uuid));
 }
 
-function generateEnumDeclaration(enumDef: EnumDef): string {
+function generateEnumDeclaration(enumDef: EnumDef, enumFn: string): string {
   const values = enumDef.values.map((v) => `  ${quoted(v)},`).join("\n");
   return exportConst(
     enumDef.name,
-    `${fnCall("pgEnum", [quoted(enumDef.sqlName), `[\n${values}\n]`])}`,
+    `${fnCall(enumFn, [quoted(enumDef.sqlName), `[\n${values}\n]`])}`,
   );
 }
 
-function generateTableDeclaration(table: TableDef): string {
+function generateTableDeclaration(table: TableDef, dialect: DialectConfig): string {
   const varName = toTableVariableName(table.name);
-  const columns = generateColumns(table);
+  const columns = generateColumns(table, dialect);
   const extras = generateTableExtras(table);
 
   if (extras.length > 0) {
-    return generateTableWithExtras(table, varName, columns, extras);
+    return generateTableWithExtras(table, varName, columns, extras, dialect);
   }
 
-  return exportConst(varName, fnCall("pgTable", [quoted(table.tableName), columns]));
+  return exportConst(varName, fnCall(dialect.tableFn, [quoted(table.tableName), columns]));
 }
 
 function generateTableWithExtras(
@@ -166,9 +194,10 @@ function generateTableWithExtras(
   varName: string,
   columns: string,
   extras: string[],
+  dialect: DialectConfig,
 ): string {
   return [
-    `export const ${varName} = pgTable(`,
+    `export const ${varName} = ${dialect.tableFn}(`,
     `  ${quoted(table.tableName)},`,
     `${columns
       .split("\n")
@@ -179,8 +208,10 @@ function generateTableWithExtras(
   ].join("\n");
 }
 
-function generateColumns(table: TableDef): string {
-  const lines = table.fields.map((field) => `  ${field.name}: ${mapFieldToColumn(field, table)},`);
+function generateColumns(table: TableDef, dialect: DialectConfig): string {
+  const lines = table.fields.map(
+    (field) => `  ${field.name}: ${mapFieldToColumn(field, table, dialect)},`,
+  );
   return `{\n${lines.join("\n")}\n}`;
 }
 

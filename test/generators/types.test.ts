@@ -1,9 +1,11 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+import { resolveDialect } from "../../src/generators/dialect.ts";
 import { generateIndex } from "../../src/generators/index-generator.ts";
 import { generateTypes } from "../../src/generators/types-generator.ts";
 
-const typesOutput = generateTypes();
+const pg = resolveDialect("pg");
+const typesOutput = generateTypes(pg);
 const indexOutput = generateIndex();
 
 describe("types generator", () => {
@@ -62,5 +64,26 @@ describe("index generator", () => {
 
   it("re-exports describe", () => {
     assert.ok(indexOutput.includes('export * from "./describe.js";'));
+  });
+});
+
+describe("types generator (sqlite)", () => {
+  const sqlite = resolveDialect("sqlite");
+  const output = generateTypes(sqlite);
+
+  it("imports customType from drizzle-orm/sqlite-core", () => {
+    assert.ok(output.includes('import { customType } from "drizzle-orm/sqlite-core";'));
+  });
+
+  it("includes dataType returning text instead of uuid", () => {
+    assert.ok(output.includes('dataType: () => "text",'));
+  });
+
+  it("exports base36Uuid custom type", () => {
+    assert.ok(output.includes("export const base36Uuid = customType<{"));
+  });
+
+  it("includes sqlite-specific comment", () => {
+    assert.ok(output.includes("stored as text"));
   });
 });
