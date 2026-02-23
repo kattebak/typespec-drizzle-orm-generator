@@ -31,6 +31,7 @@ export function assemblePackage(
 
   return new Map([
     ["package.json", generatePackageJson(config)],
+    ["tsconfig.json", generateTsConfig()],
     ["types.ts", generateTypes(dialect)],
     ["schema.ts", generateSchema(tables, enums, dialect, config.pluralize)],
     ["relations.ts", generateRelations(tables, graph, config.pluralize)],
@@ -52,13 +53,36 @@ function generatePackageJson(config: EmitterConfig): string {
         import: "./index.js",
       },
     },
+    scripts: {
+      build: "tsc",
+      prepare: "tsc",
+    },
     dependencies: {
       "short-uuid": "^5.2.0",
     },
     peerDependencies: {
       "drizzle-orm": ">=1.0.0-beta.1",
+      typescript: ">=5.0.0",
     },
   };
 
   return `${JSON.stringify(pkg, null, 2)}\n`;
+}
+
+function generateTsConfig(): string {
+  const tsconfig = {
+    compilerOptions: {
+      target: "ESNext",
+      module: "NodeNext",
+      moduleResolution: "NodeNext",
+      declaration: true,
+      strict: true,
+      esModuleInterop: true,
+      skipLibCheck: true,
+      outDir: ".",
+    },
+    include: ["*.ts"],
+  };
+
+  return `${JSON.stringify(tsconfig, null, 2)}\n`;
 }
