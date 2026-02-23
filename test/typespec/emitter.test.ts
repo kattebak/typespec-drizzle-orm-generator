@@ -542,6 +542,58 @@ describe("IR builder (from decorator state)", () => {
   });
 });
 
+describe("IR builder: @table without @primaryKey falls back to table name", () => {
+  const program = createMockProgram();
+  const ctx = mockContext(program);
+
+  function createModel(name: string): MockModel {
+    return { kind: "Model" as const, name, properties: new Map<string, MockProp>() };
+  }
+
+  function addProp(model: MockModel, name: string, typeName: string, optional = false): MockProp {
+    const prop: MockProp = {
+      kind: "ModelProperty" as const,
+      name,
+      type: mockScalar(typeName),
+      optional,
+      model,
+    };
+    model.properties.set(name, prop);
+    return prop;
+  }
+
+  const workspace = createModel("Workspace");
+  const wsId = addProp(workspace, "id", "string");
+  addProp(workspace, "name", "string");
+  const wsCreatedAt = addProp(workspace, "createdAt", "utcDateTime");
+  const wsUpdatedAt = addProp(workspace, "updatedAt", "utcDateTime");
+
+  $table(ctx, workspace as unknown as Model, "workspaces", "rockpool");
+  $pk(ctx, wsId as unknown as ModelProperty);
+  $uuid(ctx, wsId as unknown as ModelProperty, "base36", true);
+  $createdAt(ctx, wsCreatedAt as unknown as ModelProperty);
+  $updatedAt(ctx, wsUpdatedAt as unknown as ModelProperty);
+
+  const { tables } = buildIR(program);
+
+  it("produces a table even without @primaryKey", () => {
+    assert.equal(tables.length, 1);
+  });
+
+  it("uses @table name as the SQL table name", () => {
+    assert.equal(tables[0].tableName, "workspaces");
+  });
+
+  it("detects @pk field correctly", () => {
+    assert.deepEqual(tables[0].primaryKey.columns, ["id"]);
+    assert.equal(tables[0].primaryKey.isComposite, false);
+  });
+
+  it("includes all fields", () => {
+    assert.equal(tables[0].fields.length, 4);
+  });
+});
+
 describe("end-to-end: decorators → IR builder → assemblePackage", () => {
   const program = createMockProgram();
   createBookstoreMocks(program);
