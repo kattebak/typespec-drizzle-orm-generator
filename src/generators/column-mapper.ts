@@ -3,7 +3,12 @@ import type { FieldDef, TableDef } from "../ir/types.js";
 import type { DialectConfig } from "./dialect.js";
 import { toTableVariableName } from "./naming.js";
 
-export function mapFieldToColumn(field: FieldDef, table: TableDef, dialect: DialectConfig): string {
+export function mapFieldToColumn(
+  field: FieldDef,
+  table: TableDef,
+  dialect: DialectConfig,
+  shouldPluralize = true,
+): string {
   const calls: ChainMethod[] = [];
 
   if (isPrimaryKey(field, table)) {
@@ -19,7 +24,7 @@ export function mapFieldToColumn(field: FieldDef, table: TableDef, dialect: Dial
   }
 
   if (field.references) {
-    const targetVar = toTableVariableName(field.references.tableName);
+    const targetVar = toTableVariableName(field.references.tableName, shouldPluralize);
     const targetField = field.references.fieldName;
     calls.push({ method: "references", args: [`() => ${targetVar}.${targetField}`] });
   }

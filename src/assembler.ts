@@ -12,6 +12,7 @@ export interface EmitterConfig {
   packageName: string;
   packageVersion: string;
   dialect: Dialect;
+  pluralize: boolean;
 }
 
 /**
@@ -25,15 +26,15 @@ export function assemblePackage(
   enums: EnumDef[],
   config: EmitterConfig,
 ): Map<string, string> {
-  const graph = buildRelationGraph(tables);
+  const graph = buildRelationGraph(tables, config.pluralize);
   const dialect = resolveDialect(config.dialect);
 
   return new Map([
     ["package.json", generatePackageJson(config)],
     ["types.ts", generateTypes(dialect)],
-    ["schema.ts", generateSchema(tables, enums, dialect)],
-    ["relations.ts", generateRelations(tables, graph)],
-    ["describe.ts", generateDescribe(tables, graph)],
+    ["schema.ts", generateSchema(tables, enums, dialect, config.pluralize)],
+    ["relations.ts", generateRelations(tables, graph, config.pluralize)],
+    ["describe.ts", generateDescribe(tables, graph, config.pluralize)],
     ["index.ts", generateIndex()],
   ]);
 }

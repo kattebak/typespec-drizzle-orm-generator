@@ -3,7 +3,11 @@ import type { Relation, RelationGraph } from "../ir/relation-graph.js";
 import type { TableDef } from "../ir/types.js";
 import { toTableVariableName } from "./naming.js";
 
-export function generateRelations(tables: TableDef[], graph: RelationGraph): string {
+export function generateRelations(
+  tables: TableDef[],
+  graph: RelationGraph,
+  shouldPluralize = true,
+): string {
   const lines: string[] = [];
 
   lines.push(importDecl(["defineRelations"], "drizzle-orm"));
@@ -12,13 +16,13 @@ export function generateRelations(tables: TableDef[], graph: RelationGraph): str
   lines.push("export const relations = defineRelations(schema, (r) => ({");
 
   for (const table of tables) {
-    const tableVar = toTableVariableName(table.name);
+    const tableVar = toTableVariableName(table.name, shouldPluralize);
     const rels = graph.get(table.name) || [];
 
     lines.push(`  ${tableVar}: {`);
 
     for (const rel of rels) {
-      lines.push(`    ${generateRelationEntry(rel, tableVar)}`);
+      lines.push(`    ${generateRelationEntry(rel, tableVar, shouldPluralize)}`);
     }
 
     lines.push("  },");
@@ -30,10 +34,10 @@ export function generateRelations(tables: TableDef[], graph: RelationGraph): str
   return lines.join("\n");
 }
 
-function generateRelationEntry(rel: Relation, tableVar: string): string {
+function generateRelationEntry(rel: Relation, tableVar: string, shouldPluralize: boolean): string {
   switch (rel.kind) {
     case "one": {
-      const targetTableVar = toTableVariableName(rel.toTable);
+      const targetTableVar = toTableVariableName(rel.toTable, shouldPluralize);
       const config = objectLiteral(
         [
           ["from", new RawCode(`r.${tableVar}.${rel.fromField}`)],
@@ -44,12 +48,12 @@ function generateRelationEntry(rel: Relation, tableVar: string): string {
       return `${rel.name}: r.one.${targetTableVar}(${config}),`;
     }
     case "many": {
-      const manyTableVar = toTableVariableName(rel.table);
+      const manyTableVar = toTableVariableName(rel.table, shouldPluralize);
       return `${rel.name}: r.many.${manyTableVar}(),`;
     }
     case "many-through": {
-      const targetTableVar = toTableVariableName(rel.toTable);
-      const junctionTableVar = toTableVariableName(rel.junction.table);
+      const targetTableVar = toTableVariableName(rel.toTable, shouldPluralize);
+      const junctionTableVar = toTableVariableName(rel.junction.table, shouldPluralize);
       const config = objectLiteral(
         [
           [
