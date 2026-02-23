@@ -1,6 +1,7 @@
 import type { EmitContext } from "@typespec/compiler";
 import { emitFile, resolvePath } from "@typespec/compiler";
 import { assemblePackage } from "./assembler.js";
+import type { Dialect } from "./generators/dialect.js";
 import { buildIR } from "./ir/builder.js";
 
 export {
@@ -26,6 +27,7 @@ export { $lib } from "./lib.js";
 export interface EmitterOptions {
   "package-name"?: string;
   "package-version"?: string;
+  dialect?: Dialect;
 }
 
 export async function $onEmit(context: EmitContext<EmitterOptions>): Promise<void> {
@@ -36,6 +38,7 @@ export async function $onEmit(context: EmitContext<EmitterOptions>): Promise<voi
   const config = {
     packageName: context.options["package-name"] ?? "drizzle-schema",
     packageVersion: context.options["package-version"] ?? "0.0.1",
+    dialect: context.options.dialect ?? "pg",
   };
 
   const files = assemblePackage(tables, enums, config);

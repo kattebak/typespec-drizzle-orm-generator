@@ -6,6 +6,7 @@ import { bookstoreEnums, bookstoreTables } from "../fixtures/bookstore-ir.ts";
 const config = {
   packageName: "@bookstore/drizzle-schema",
   packageVersion: "0.0.1",
+  dialect: "pg" as const,
 };
 
 const files = assemblePackage(bookstoreTables, bookstoreEnums, config);

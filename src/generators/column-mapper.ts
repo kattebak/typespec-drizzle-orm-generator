@@ -1,8 +1,9 @@
-import { type ChainMethod, chainCall, fnCall, objectLiteral, quoted } from "../codegen/index.js";
+import { type ChainMethod, chainCall, quoted } from "../codegen/index.js";
 import type { FieldDef, TableDef } from "../ir/types.js";
+import type { DialectConfig } from "./dialect.js";
 import { toTableVariableName } from "./naming.js";
 
-export function mapFieldToColumn(field: FieldDef, table: TableDef): string {
+export function mapFieldToColumn(field: FieldDef, table: TableDef, dialect: DialectConfig): string {
   const calls: ChainMethod[] = [];
 
   if (isPrimaryKey(field, table)) {
@@ -24,7 +25,7 @@ export function mapFieldToColumn(field: FieldDef, table: TableDef): string {
   }
 
   if (field.createdAt || field.updatedAt) {
-    calls.push({ method: "defaultNow" });
+    calls.push({ method: dialect.mapTimestampDefault() });
   }
 
   if (field.constraints?.unique) {
@@ -35,47 +36,7 @@ export function mapFieldToColumn(field: FieldDef, table: TableDef): string {
     calls.push({ method: "default", args: [mapDefault(field.defaultValue)] });
   }
 
-  return chainCall(mapBaseType(field), calls);
-}
-
-function mapBaseType(field: FieldDef): string {
-  const col = quoted(field.columnName);
-
-  if (field.uuid) {
-    return fnCall("base36Uuid", [col]);
-  }
-
-  switch (field.type.kind) {
-    case "text":
-      return fnCall("text", [col]);
-    case "varchar":
-      return fnCall("varchar", [
-        col,
-        objectLiteral([["length", String(field.type.length)]], { concise: true }),
-      ]);
-    case "integer":
-      return fnCall("integer", [col]);
-    case "bigint":
-      return fnCall("bigint", [
-        col,
-        objectLiteral([["mode", quoted("number")]], { concise: true }),
-      ]);
-    case "real":
-      return fnCall("real", [col]);
-    case "doublePrecision":
-      return fnCall("doublePrecision", [col]);
-    case "boolean":
-      return fnCall("boolean", [col]);
-    case "timestamp":
-      return fnCall("timestamp", [
-        col,
-        objectLiteral([["withTimezone", "true"]], { concise: true }),
-      ]);
-    case "uuid":
-      return fnCall("base36Uuid", [col]);
-    case "enum":
-      return fnCall(field.type.enumName, [col]);
-  }
+  return chainCall(dialect.mapFieldType(field), calls);
 }
 
 function isPrimaryKey(field: FieldDef, table: TableDef): boolean {

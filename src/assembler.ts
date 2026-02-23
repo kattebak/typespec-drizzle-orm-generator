@@ -1,4 +1,6 @@
 import { generateDescribe } from "./generators/describe-generator.js";
+import type { Dialect } from "./generators/dialect.js";
+import { resolveDialect } from "./generators/dialect.js";
 import { generateIndex } from "./generators/index-generator.js";
 import { generateRelations } from "./generators/relations-generator.js";
 import { generateSchema } from "./generators/schema-generator.js";
@@ -9,6 +11,7 @@ import type { EnumDef, TableDef } from "./ir/types.js";
 export interface EmitterConfig {
   packageName: string;
   packageVersion: string;
+  dialect: Dialect;
 }
 
 /**
@@ -23,11 +26,12 @@ export function assemblePackage(
   config: EmitterConfig,
 ): Map<string, string> {
   const graph = buildRelationGraph(tables);
+  const dialect = resolveDialect(config.dialect);
 
   return new Map([
     ["package.json", generatePackageJson(config)],
-    ["types.ts", generateTypes()],
-    ["schema.ts", generateSchema(tables, enums)],
+    ["types.ts", generateTypes(dialect)],
+    ["schema.ts", generateSchema(tables, enums, dialect)],
     ["relations.ts", generateRelations(tables, graph)],
     ["describe.ts", generateDescribe(tables, graph)],
     ["index.ts", generateIndex()],
