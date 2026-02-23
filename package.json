@@ -21,7 +21,8 @@
     "@babel/types": "^7.29.0"
   },
   "peerDependencies": {
-    "@typespec/compiler": ">=1.0.0"
+    "@typespec/compiler": ">=1.0.0",
+    "drizzle-orm": ">=1.0.0-beta.1"
   },
   "scripts": {
     "build": "tsgo --project tsconfig.build.json",
