@@ -66,6 +66,14 @@ describe("package assembly", () => {
     assert.equal(pkg.scripts.prepare, "tsc");
   });
 
+  it("package.json includes build and prepare scripts", () => {
+    const content = files.get("package.json");
+    assert.ok(content);
+    const pkg = JSON.parse(content);
+    assert.equal(pkg.scripts.build, "tsc");
+    assert.equal(pkg.scripts.prepare, "tsc");
+  });
+
   it("package.json includes short-uuid dependency and drizzle-orm peerDependency", () => {
     const content = files.get("package.json");
     assert.ok(content);
