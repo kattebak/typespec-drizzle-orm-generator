@@ -678,9 +678,47 @@ describe("schema generator (sqlite)", () => {
     assert.ok(!output.includes("pgEnum"));
   });
 
-  it("maps enum fields to text()", () => {
+  it("maps enum fields to text with enum constraint", () => {
     const output = generateSchema(bookstoreTables, bookstoreEnums, sqlite);
-    assert.ok(output.includes('format: text("format").notNull(),'));
+    assert.ok(
+      output.includes(
+        'format: text("format", { enum: ["hardcover", "paperback", "ebook", "audiobook"] }).notNull(),',
+      ),
+    );
+  });
+
+  it("generates enum constraint for isolated enum field", () => {
+    const tableDef: TableDef = {
+      name: "Task",
+      service: "test",
+      tableName: "tasks",
+      primaryKey: { tableName: "tasks", columns: ["id"], isComposite: false },
+      fields: [
+        {
+          name: "id",
+          columnName: "id",
+          type: { kind: "text" },
+          nullable: false,
+          createdAt: false,
+          updatedAt: false,
+        },
+        {
+          name: "status",
+          columnName: "status",
+          type: { kind: "enum", enumName: "taskStatusEnum", values: ["open", "closed"] },
+          nullable: false,
+          createdAt: false,
+          updatedAt: false,
+        },
+      ],
+      foreignKeys: [],
+      isJunction: false,
+      indexes: [],
+      uniqueConstraints: [],
+    };
+    const output = generateSchema([tableDef], [], sqlite);
+    assert.ok(output.includes('status: text("status", { enum: ["open", "closed"] }).notNull(),'));
+    assert.ok(!output.includes("pgEnum"));
   });
 
   it("maps boolean fields to integer with boolean mode", () => {

@@ -1,5 +1,5 @@
 import type { ChainMethod } from "../codegen/index.js";
-import { fnCall, objectLiteral, quoted } from "../codegen/index.js";
+import { arrayLiteral, fnCall, objectLiteral, quoted } from "../codegen/index.js";
 import type { FieldDef } from "../ir/types.js";
 
 export type Dialect = "pg" | "sqlite";
@@ -110,7 +110,12 @@ function sqliteDialect(): DialectConfig {
         case "uuid":
           return fnCall("base36Uuid", [col]);
         case "enum":
-          return fnCall("text", [col]);
+          return fnCall("text", [
+            col,
+            objectLiteral([["enum", arrayLiteral(field.type.values.map((v) => quoted(v)))]], {
+              concise: true,
+            }),
+          ]);
       }
     },
   };

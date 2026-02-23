@@ -113,7 +113,7 @@ export const editions = sqliteTable("editions", {
   publisherId: text("publisher_id")
     .notNull()
     .references(() => publishers.publisherId),
-  format: text("format").notNull(),
+  format: text("format", { enum: ["hardcover", "paperback", "ebook", "audiobook"] }).notNull(),
   language: text("language").notNull(),
   title: text("title").notNull(),
   isbn: text("isbn"),
