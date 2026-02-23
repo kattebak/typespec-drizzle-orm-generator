@@ -17,6 +17,7 @@ export function generateSchema(
   tables: TableDef[],
   enums: EnumDef[],
   dialect: DialectConfig,
+  shouldPluralize = true,
 ): string {
   const sections: string[] = [];
 
@@ -29,7 +30,7 @@ export function generateSchema(
   }
 
   for (const table of tables) {
-    sections.push(generateTableDeclaration(table, dialect));
+    sections.push(generateTableDeclaration(table, dialect, shouldPluralize));
   }
 
   return `${sections.join("\n\n")}\n`;
@@ -177,10 +178,14 @@ function generateEnumDeclaration(enumDef: EnumDef, enumFn: string): string {
   );
 }
 
-function generateTableDeclaration(table: TableDef, dialect: DialectConfig): string {
-  const varName = toTableVariableName(table.name);
-  const columns = generateColumns(table, dialect);
-  const extras = generateTableExtras(table);
+function generateTableDeclaration(
+  table: TableDef,
+  dialect: DialectConfig,
+  shouldPluralize: boolean,
+): string {
+  const varName = toTableVariableName(table.name, shouldPluralize);
+  const columns = generateColumns(table, dialect, shouldPluralize);
+  const extras = generateTableExtras(table, shouldPluralize);
 
   if (extras.length > 0) {
     return generateTableWithExtras(table, varName, columns, extras, dialect);
@@ -208,14 +213,18 @@ function generateTableWithExtras(
   ].join("\n");
 }
 
-function generateColumns(table: TableDef, dialect: DialectConfig): string {
+function generateColumns(
+  table: TableDef,
+  dialect: DialectConfig,
+  shouldPluralize: boolean,
+): string {
   const lines = table.fields.map(
-    (field) => `  ${field.name}: ${mapFieldToColumn(field, table, dialect)},`,
+    (field) => `  ${field.name}: ${mapFieldToColumn(field, table, dialect, shouldPluralize)},`,
   );
   return `{\n${lines.join("\n")}\n}`;
 }
 
-function generateTableExtras(table: TableDef): string[] {
+function generateTableExtras(table: TableDef, shouldPluralize: boolean): string[] {
   const extras: string[] = [];
 
   if (table.primaryKey.isComposite) {
@@ -252,7 +261,7 @@ function generateTableExtras(table: TableDef): string[] {
 
   for (const fk of table.foreignKeys) {
     const localCols = fk.columns.map((c) => `table.${c}`);
-    const foreignVar = toTableVariableName(fk.foreignTable);
+    const foreignVar = toTableVariableName(fk.foreignTable, shouldPluralize);
     const foreignCols = fk.foreignColumns.map((c) => `${foreignVar}.${c}`);
     const fkObj = objectLiteral(
       [

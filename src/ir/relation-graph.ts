@@ -55,7 +55,7 @@ export function deriveOneRelationName(fieldName: string): string {
  * 2. For each @junction table, create ManyThroughRelation on both sides
  * 3. Return Map<tableName, Relation[]>
  */
-export function buildRelationGraph(tables: TableDef[]): RelationGraph {
+export function buildRelationGraph(tables: TableDef[], shouldPluralize = true): RelationGraph {
   const graph: RelationGraph = new Map();
 
   for (const table of tables) {
@@ -85,7 +85,7 @@ export function buildRelationGraph(tables: TableDef[]): RelationGraph {
       if (!table.isJunction) {
         graph.get(ref.tableName)?.push({
           kind: "many",
-          name: toTableVariableName(table.name),
+          name: toTableVariableName(table.name, shouldPluralize),
           table: table.name,
         });
       }
@@ -108,7 +108,7 @@ export function buildRelationGraph(tables: TableDef[]): RelationGraph {
     // Side A gets many-through to Side B
     graph.get(refA.tableName)?.push({
       kind: "many-through",
-      name: toTableVariableName(refB.tableName),
+      name: toTableVariableName(refB.tableName, shouldPluralize),
       fromTable: refA.tableName,
       fromField: refA.fieldName,
       toTable: refB.tableName,
@@ -123,7 +123,7 @@ export function buildRelationGraph(tables: TableDef[]): RelationGraph {
     // Side B gets many-through to Side A
     graph.get(refB.tableName)?.push({
       kind: "many-through",
-      name: toTableVariableName(refA.tableName),
+      name: toTableVariableName(refA.tableName, shouldPluralize),
       fromTable: refB.tableName,
       fromField: refB.fieldName,
       toTable: refA.tableName,

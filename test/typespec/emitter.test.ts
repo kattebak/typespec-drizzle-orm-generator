@@ -603,6 +603,7 @@ describe("end-to-end: decorators → IR builder → assemblePackage", () => {
     packageName: "@bookstore/drizzle-schema",
     packageVersion: "0.0.1",
     dialect: "pg" as const,
+    pluralize: true,
   };
 
   const files = assemblePackage(ir.tables, ir.enums, config);

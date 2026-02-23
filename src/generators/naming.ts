@@ -10,11 +10,11 @@ export function toCamelCase(str: string): string {
 
 /**
  * Convert PascalCase table name to camelCase table variable name.
- * "BookGenre" → "bookGenres" (pluralized for table variables)
+ * "BookGenre" → "bookGenres" (pluralized) or "bookGenre" (singular when shouldPluralize=false)
  */
-export function toTableVariableName(name: string): string {
+export function toTableVariableName(name: string, shouldPluralize = true): string {
   const camel = name[0].toLowerCase() + name.slice(1);
-  return pluralize(camel);
+  return shouldPluralize ? pluralize(camel) : camel;
 }
 
 /**

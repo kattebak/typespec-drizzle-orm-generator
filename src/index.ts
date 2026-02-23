@@ -28,6 +28,7 @@ export interface EmitterOptions {
   "package-name"?: string;
   "package-version"?: string;
   dialect?: Dialect;
+  pluralize?: boolean;
 }
 
 export async function $onEmit(context: EmitContext<EmitterOptions>): Promise<void> {
@@ -39,6 +40,7 @@ export async function $onEmit(context: EmitContext<EmitterOptions>): Promise<voi
     packageName: context.options["package-name"] ?? "drizzle-schema",
     packageVersion: context.options["package-version"] ?? "0.0.1",
     dialect: context.options.dialect ?? "pg",
+    pluralize: context.options.pluralize ?? true,
   };
 
   const files = assemblePackage(tables, enums, config);

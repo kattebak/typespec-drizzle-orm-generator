@@ -831,3 +831,23 @@ describe("schema generator (sqlite)", () => {
     assert.equal(openParens, closeParens, "Unbalanced parens");
   });
 });
+
+describe("schema generator (pluralize: false)", () => {
+  it("uses singular variable names derived from model name", () => {
+    const output = generateSchema(bookstoreTables, bookstoreEnums, pg, false);
+
+    assert.ok(output.includes("export const author = pgTable("));
+    assert.ok(output.includes("export const book = pgTable("));
+    assert.ok(output.includes("export const genre = pgTable("));
+    assert.ok(output.includes("export const bookGenre = pgTable("));
+    assert.ok(output.includes("export const review = pgTable("));
+  });
+
+  it("does not pluralize variable names", () => {
+    const output = generateSchema(bookstoreTables, bookstoreEnums, pg, false);
+
+    assert.ok(!output.includes("export const authors "));
+    assert.ok(!output.includes("export const books "));
+    assert.ok(!output.includes("export const genres "));
+  });
+});
