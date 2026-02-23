@@ -101,8 +101,8 @@ Created `src/codegen/` with `stringify.ts`, `ast-helpers.ts`, unit tests. No exi
 | `src/codegen/stringify.ts`         | Create |
 | `src/codegen/ast-helpers.ts`       | Create |
 | `src/codegen/index.ts`             | Create |
-| `test/codegen/stringify.test.ts`   | Create |
-| `test/codegen/ast-helpers.test.ts` | Create |
+| `src/codegen/stringify.test.ts`   | Create |
+| `src/codegen/ast-helpers.test.ts` | Create |
 
 **Implementation notes:**
 
@@ -122,8 +122,8 @@ Migrated both generators to use codegen helpers. Column mapper output is byte-id
 | --------------------------------------- | ------ |
 | `src/generators/column-mapper.ts`       | Modify |
 | `src/generators/schema-generator.ts`    | Modify |
-| `test/generators/column-mapper.test.ts` | —      |
-| `test/generators/schema.test.ts`        | Modify |
+| `src/generators/column-mapper.test.ts` | —      |
+| `src/generators/schema.test.ts`        | Modify |
 
 **Implementation notes:**
 
@@ -143,8 +143,8 @@ Migrated both generators to use codegen helpers. Relation config objects (`from`
 | ------------------------------------------- | ------ |
 | `src/generators/relations-generator.ts`     | Modify |
 | `src/generators/describe-generator.ts`      | Modify |
-| `test/generators/relations.test.ts`         | Modify |
-| `test/generators/describe.test.ts`          | Modify |
+| `src/generators/relations.test.ts`         | Modify |
+| `src/generators/describe.test.ts`          | Modify |
 
 **Implementation notes:**
 
@@ -162,7 +162,7 @@ Migrated both small generators to use codegen helpers. Output unchanged — no t
 | --------------------------------------- | ------ |
 | `src/generators/types-generator.ts`     | Modify |
 | `src/generators/index-generator.ts`     | Modify |
-| `test/generators/types.test.ts`         | —      |
+| `src/generators/types.test.ts`         | —      |
 
 **Implementation notes:**
 

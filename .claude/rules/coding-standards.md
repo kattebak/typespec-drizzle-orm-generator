@@ -122,17 +122,17 @@ export function pluralize(word: string): string {
 
 ## Tests
 
-Tests live in a separate `test/` directory, mirroring `src/` structure:
+Tests are co-located under `src/` alongside the code they cover:
 
 ```
 src/generators/naming.ts
-test/generators/naming.test.ts
+src/generators/naming.test.ts
 
 src/ir/relation-graph.ts
-test/ir/relation-graph.test.ts
+src/ir/relation-graph.test.ts
 
-test/fixtures/          # Shared test data (bookstore IR, etc.)
-test/integration/       # End-to-end generator tests with real SQLite
+src/fixtures/           # Shared test data (bookstore IR, etc.)
+src/integration/        # End-to-end generator tests with real SQLite
 ```
 
 ### Test Runner
@@ -146,7 +146,7 @@ test/integration/       # End-to-end generator tests with real SQLite
 {
   "scripts": {
     "check": "tsgo --noEmit",
-    "test": "node --test --import=tsx 'test/**/*.test.ts'",
+    "test": "node --test --import=tsx 'src/**/*.test.ts'",
     "pretest": "npm run check"
   }
 }

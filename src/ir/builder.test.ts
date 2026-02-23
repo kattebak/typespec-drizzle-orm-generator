@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { DecoratorContext, Model, ModelProperty } from "@typespec/compiler";
-import { assemblePackage } from "../../src/assembler.ts";
+import { assemblePackage } from "../assembler.ts";
 import {
   $compositeUnique,
   $createdAt,
@@ -16,8 +16,8 @@ import {
   $unique,
   $updatedAt,
   $uuid,
-} from "../../src/decorators.ts";
-import { buildIR, type ProgramStateAccess } from "../../src/ir/builder.ts";
+} from "../decorators.ts";
+import { buildIR, type ProgramStateAccess } from "./builder.ts";
 
 /**
  * Creates a mock TypeSpec Program with state management.

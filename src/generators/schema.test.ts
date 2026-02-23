@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { resolveDialect } from "../../src/generators/dialect.ts";
-import { generateSchema } from "../../src/generators/schema-generator.ts";
-import type { EnumDef, TableDef } from "../../src/ir/types.ts";
+import { resolveDialect } from "./dialect.ts";
+import { generateSchema } from "./schema-generator.ts";
+import type { EnumDef, TableDef } from "../ir/types.ts";
 import { bookstoreEnums, bookstoreTables } from "../fixtures/bookstore-ir.ts";
 
 const pg = resolveDialect("pg");

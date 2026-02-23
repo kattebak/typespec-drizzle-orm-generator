@@ -1,11 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import type {
-  ManyRelation,
-  ManyThroughRelation,
-  OneRelation,
-} from "../../src/ir/relation-graph.ts";
-import { buildRelationGraph, deriveOneRelationName } from "../../src/ir/relation-graph.ts";
+import type { ManyRelation, ManyThroughRelation, OneRelation } from "./relation-graph.ts";
+import { buildRelationGraph, deriveOneRelationName } from "./relation-graph.ts";
 import { bookstoreTables } from "../fixtures/bookstore-ir.ts";
 
 describe("deriveOneRelationName", () => {

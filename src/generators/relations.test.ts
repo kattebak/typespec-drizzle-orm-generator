@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { generateRelations } from "../../src/generators/relations-generator.ts";
-import { buildRelationGraph } from "../../src/ir/relation-graph.ts";
+import { generateRelations } from "./relations-generator.ts";
+import { buildRelationGraph } from "../ir/relation-graph.ts";
 import { bookstoreTables } from "../fixtures/bookstore-ir.ts";
 
 const graph = buildRelationGraph(bookstoreTables);

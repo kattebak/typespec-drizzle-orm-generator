@@ -322,7 +322,7 @@ When using `sqlite`, types that don't exist natively in SQLite are mapped to com
 
 ## Full example
 
-See [test/fixtures/bookstore.tsp](test/fixtures/bookstore.tsp) for a complete 9-entity bookstore domain with authors, books, genres (many-to-many via junction), editions (3 FKs including nullable), reviews, tags, translators, and publishers.
+See [src/fixtures/bookstore.tsp](src/fixtures/bookstore.tsp) for a complete 9-entity bookstore domain with authors, books, genres (many-to-many via junction), editions (3 FKs including nullable), reviews, tags, translators, and publishers.
 
 ## Contributing
 
