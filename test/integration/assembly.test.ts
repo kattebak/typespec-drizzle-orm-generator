@@ -143,10 +143,14 @@ describe("package assembly", () => {
     assert.ok(schema.includes('from "drizzle-orm/pg-core"'));
   });
 
-  it("schema.ts imports base36Uuid and generateBase36Id from types", () => {
+  it("schema.ts imports base36Uuid, generateBase36Id, and nullable wrappers from types", () => {
     const schema = files.get("schema.ts");
     assert.ok(schema);
-    assert.ok(schema.includes('import { base36Uuid, generateBase36Id } from "./types.js"'));
+    assert.ok(schema.includes('from "./types.js"'));
+    assert.ok(schema.includes("base36Uuid"));
+    assert.ok(schema.includes("generateBase36Id"));
+    assert.ok(schema.includes("nullableInteger"));
+    assert.ok(schema.includes("nullableText"));
   });
 
   // ===========================================

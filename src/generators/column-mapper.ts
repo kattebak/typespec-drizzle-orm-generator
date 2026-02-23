@@ -41,7 +41,8 @@ export function mapFieldToColumn(
     calls.push({ method: "default", args: [mapDefault(field.defaultValue)] });
   }
 
-  return chainCall(dialect.mapFieldType(field), calls);
+  const base = field.nullable ? dialect.mapNullableFieldType(field) : dialect.mapFieldType(field);
+  return chainCall(base, calls);
 }
 
 function isPrimaryKey(field: FieldDef, table: TableDef): boolean {

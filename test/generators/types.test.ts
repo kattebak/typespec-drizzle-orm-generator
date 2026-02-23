@@ -60,6 +60,35 @@ describe("types generator", () => {
     assert.ok(typesOutput.includes("export function generateBase36Id(): string {"));
     assert.ok(typesOutput.includes("return translator.new();"));
   });
+
+  it("exports nullableText custom type", () => {
+    assert.ok(typesOutput.includes("export const nullableText = customType<{"));
+    assert.ok(typesOutput.includes("  data: string | undefined;"));
+    assert.ok(typesOutput.includes("  driverData: string | null;"));
+    assert.ok(typesOutput.includes('dataType: () => "text",'));
+    assert.ok(typesOutput.includes("fromDriver: (v) => v ?? undefined,"));
+  });
+
+  it("exports nullableInteger custom type", () => {
+    assert.ok(typesOutput.includes("export const nullableInteger = customType<{"));
+    assert.ok(typesOutput.includes('dataType: () => "integer",'));
+  });
+
+  it("exports nullableReal custom type", () => {
+    assert.ok(typesOutput.includes("export const nullableReal = customType<{"));
+    assert.ok(typesOutput.includes('dataType: () => "real",'));
+  });
+
+  it("exports PG-specific nullable wrappers", () => {
+    assert.ok(typesOutput.includes("export const nullableBigint = customType<{"));
+    assert.ok(typesOutput.includes("export const nullableDoublePrecision = customType<{"));
+    assert.ok(typesOutput.includes("export const nullableBoolean = customType<{"));
+    assert.ok(typesOutput.includes("export const nullableTimestamp = customType<{"));
+  });
+
+  it("nullableTimestamp uses timestamp with time zone dataType", () => {
+    assert.ok(typesOutput.includes('dataType: () => "timestamp with time zone",'));
+  });
 });
 
 describe("index generator", () => {
@@ -112,5 +141,27 @@ describe("types generator (sqlite)", () => {
 
   it("exports generateBase36Id function", () => {
     assert.ok(output.includes("export function generateBase36Id(): string {"));
+  });
+
+  it("exports nullableText custom type for SQLite", () => {
+    assert.ok(output.includes("export const nullableText = customType<{"));
+    assert.ok(output.includes('dataType: () => "text",'));
+  });
+
+  it("exports nullableInteger custom type for SQLite", () => {
+    assert.ok(output.includes("export const nullableInteger = customType<{"));
+    assert.ok(output.includes('dataType: () => "integer",'));
+  });
+
+  it("exports nullableReal custom type for SQLite", () => {
+    assert.ok(output.includes("export const nullableReal = customType<{"));
+    assert.ok(output.includes('dataType: () => "real",'));
+  });
+
+  it("does not export PG-specific nullable wrappers", () => {
+    assert.ok(!output.includes("nullableBigint"));
+    assert.ok(!output.includes("nullableDoublePrecision"));
+    assert.ok(!output.includes("nullableBoolean"));
+    assert.ok(!output.includes("nullableTimestamp"));
   });
 });

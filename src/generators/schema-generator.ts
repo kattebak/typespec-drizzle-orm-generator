@@ -46,11 +46,8 @@ function generateImports(tables: TableDef[], enums: EnumDef[], dialect: DialectC
     lines.push(importDecl(["sql"], "drizzle-orm"));
   }
 
-  if (hasUuidFields(tables)) {
-    const typesImports = ["base36Uuid"];
-    if (hasAutoGenerateUuid(tables)) {
-      typesImports.push("generateBase36Id");
-    }
+  const typesImports = collectTypesImports(tables, dialect);
+  if (typesImports.length > 0) {
     lines.push(importDecl(typesImports, "./types.js"));
   }
 
@@ -104,6 +101,7 @@ function collectCoreImports(
 
     for (const field of table.fields) {
       if (field.uuid) continue;
+      if (field.nullable && dialect.nullableWrapperName(field.type.kind)) continue;
 
       for (const imp of collectFieldImports(field, dialect)) {
         imports.add(imp);
@@ -170,12 +168,27 @@ function hasCheckConstraints(table: TableDef): boolean {
   );
 }
 
-function hasUuidFields(tables: TableDef[]): boolean {
-  return tables.some((t) => t.fields.some((f) => f.uuid));
-}
+function collectTypesImports(tables: TableDef[], dialect: DialectConfig): string[] {
+  const imports = new Set<string>();
 
-function hasAutoGenerateUuid(tables: TableDef[]): boolean {
-  return tables.some((t) => t.fields.some((f) => f.uuid?.autoGenerate));
+  for (const table of tables) {
+    for (const field of table.fields) {
+      if (field.uuid) {
+        imports.add("base36Uuid");
+        if (field.uuid.autoGenerate) {
+          imports.add("generateBase36Id");
+        }
+      }
+      if (field.nullable && !field.uuid) {
+        const wrapperName = dialect.nullableWrapperName(field.type.kind);
+        if (wrapperName) {
+          imports.add(wrapperName);
+        }
+      }
+    }
+  }
+
+  return [...imports].sort();
 }
 
 function generateEnumDeclaration(enumDef: EnumDef, enumFn: string): string {

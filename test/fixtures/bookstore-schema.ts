@@ -1,4 +1,14 @@
-import { integer, primaryKey, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { customType, integer, primaryKey, sqliteTable, text } from "drizzle-orm/sqlite-core";
+
+const nullableText = customType<{ data: string | undefined; driverData: string | null }>({
+  dataType: () => "text",
+  fromDriver: (v) => v ?? undefined,
+});
+
+const nullableInteger = customType<{ data: number | undefined; driverData: number | null }>({
+  dataType: () => "integer",
+  fromDriver: (v) => v ?? undefined,
+});
 
 // ============================================
 // Author
@@ -7,9 +17,9 @@ import { integer, primaryKey, sqliteTable, text } from "drizzle-orm/sqlite-core"
 export const authors = sqliteTable("authors", {
   authorId: text("author_id").primaryKey(),
   name: text("name").notNull(),
-  bio: text("bio"),
-  birthYear: integer("birth_year"),
-  nationality: text("nationality"),
+  bio: nullableText("bio"),
+  birthYear: nullableInteger("birth_year"),
+  nationality: nullableText("nationality"),
   createdAt: text("created_at").notNull(),
   updatedAt: text("updated_at").notNull(),
 });
@@ -26,8 +36,8 @@ export const books = sqliteTable("books", {
   title: text("title").notNull(),
   originalLanguage: text("original_language").notNull(),
   publicationYear: integer("publication_year").notNull(),
-  isbn: text("isbn"),
-  pageCount: integer("page_count"),
+  isbn: nullableText("isbn"),
+  pageCount: nullableInteger("page_count"),
   createdAt: text("created_at").notNull(),
   updatedAt: text("updated_at").notNull(),
 });
@@ -39,7 +49,7 @@ export const books = sqliteTable("books", {
 export const genres = sqliteTable("genres", {
   genreId: text("genre_id").primaryKey(),
   name: text("name").notNull(),
-  description: text("description"),
+  description: nullableText("description"),
   createdAt: text("created_at").notNull(),
   updatedAt: text("updated_at").notNull(),
 });
@@ -94,8 +104,8 @@ export const translators = sqliteTable("translators", {
 export const publishers = sqliteTable("publishers", {
   publisherId: text("publisher_id").primaryKey(),
   name: text("name").notNull(),
-  country: text("country"),
-  founded: integer("founded"),
+  country: nullableText("country"),
+  founded: nullableInteger("founded"),
   createdAt: text("created_at").notNull(),
   updatedAt: text("updated_at").notNull(),
 });
@@ -116,7 +126,7 @@ export const editions = sqliteTable("editions", {
   format: text("format", { enum: ["hardcover", "paperback", "ebook", "audiobook"] }).notNull(),
   language: text("language").notNull(),
   title: text("title").notNull(),
-  isbn: text("isbn"),
+  isbn: nullableText("isbn"),
   publicationYear: integer("publication_year").notNull(),
   createdAt: text("created_at").notNull(),
   updatedAt: text("updated_at").notNull(),
@@ -132,7 +142,7 @@ export const reviews = sqliteTable("reviews", {
     .notNull()
     .references(() => books.bookId),
   rating: integer("rating").notNull(),
-  text: text("text"),
+  text: nullableText("text"),
   reviewerName: text("reviewer_name").notNull(),
   reviewDate: text("review_date").notNull(),
   createdAt: text("created_at").notNull(),

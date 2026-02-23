@@ -55,7 +55,7 @@ describe("column mapper", () => {
     assert.equal(mapFieldToColumn(field, table, pg), 'text("title").notNull()');
   });
 
-  it("maps an optional text field (nullable)", () => {
+  it("maps an optional text field (nullable) to nullableText", () => {
     const field = makeField({
       name: "bio",
       columnName: "bio",
@@ -63,7 +63,7 @@ describe("column mapper", () => {
       nullable: true,
     });
     const table = makeTable(["id"]);
-    assert.equal(mapFieldToColumn(field, table, pg), 'text("bio")');
+    assert.equal(mapFieldToColumn(field, table, pg), 'nullableText("bio")');
   });
 
   it("maps a required integer field", () => {
@@ -77,7 +77,7 @@ describe("column mapper", () => {
     assert.equal(mapFieldToColumn(field, table, pg), 'integer("publication_year").notNull()');
   });
 
-  it("maps an optional integer field", () => {
+  it("maps an optional integer field to nullableInteger", () => {
     const field = makeField({
       name: "pageCount",
       columnName: "page_count",
@@ -85,7 +85,7 @@ describe("column mapper", () => {
       nullable: true,
     });
     const table = makeTable(["id"]);
-    assert.equal(mapFieldToColumn(field, table, pg), 'integer("page_count")');
+    assert.equal(mapFieldToColumn(field, table, pg), 'nullableInteger("page_count")');
   });
 
   it("maps a varchar field", () => {
@@ -427,6 +427,61 @@ describe("column mapper (sqlite)", () => {
       mapFieldToColumn(field, table, sqlite),
       'text("status", { enum: ["draft", "published"] }).notNull().default("draft")',
     );
+  });
+
+  it("maps nullable text field to nullableText", () => {
+    const field = makeField({
+      name: "bio",
+      columnName: "bio",
+      type: { kind: "text" },
+      nullable: true,
+    });
+    const table = makeTable(["id"]);
+    assert.equal(mapFieldToColumn(field, table, sqlite), 'nullableText("bio")');
+  });
+
+  it("maps nullable integer field to nullableInteger", () => {
+    const field = makeField({
+      name: "pageCount",
+      columnName: "page_count",
+      type: { kind: "integer" },
+      nullable: true,
+    });
+    const table = makeTable(["id"]);
+    assert.equal(mapFieldToColumn(field, table, sqlite), 'nullableInteger("page_count")');
+  });
+
+  it("maps nullable real field to nullableReal", () => {
+    const field = makeField({
+      name: "score",
+      columnName: "score",
+      type: { kind: "real" },
+      nullable: true,
+    });
+    const table = makeTable(["id"]);
+    assert.equal(mapFieldToColumn(field, table, sqlite), 'nullableReal("score")');
+  });
+
+  it("maps nullable varchar to nullableText in SQLite", () => {
+    const field = makeField({
+      name: "name",
+      columnName: "name",
+      type: { kind: "varchar", length: 256 },
+      nullable: true,
+    });
+    const table = makeTable(["id"]);
+    assert.equal(mapFieldToColumn(field, table, sqlite), 'nullableText("name")');
+  });
+
+  it("maps nullable doublePrecision to nullableReal in SQLite", () => {
+    const field = makeField({
+      name: "price",
+      columnName: "price",
+      type: { kind: "doublePrecision" },
+      nullable: true,
+    });
+    const table = makeTable(["id"]);
+    assert.equal(mapFieldToColumn(field, table, sqlite), 'nullableReal("price")');
   });
 
   it("maps uuid field to base36Uuid", () => {
