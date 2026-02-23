@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { RawCode, stringifyObject } from "../../src/codegen/stringify.ts";
+import { RawCode, stringifyObject } from "./stringify.ts";
 
 describe("stringifyObject", () => {
   // ===========================================

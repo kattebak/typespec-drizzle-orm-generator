@@ -1,5 +1,5 @@
 import { defineRelations } from "drizzle-orm";
-import * as schema from "./bookstore-schema.ts";
+import * as schema from "./bookstore-schema.js";
 
 export const relations = defineRelations(schema, (r) => ({
   // ============================================

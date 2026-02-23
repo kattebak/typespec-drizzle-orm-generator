@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { resolveDialect } from "../../src/generators/dialect.ts";
-import { generateIndex } from "../../src/generators/index-generator.ts";
-import { generateTypes } from "../../src/generators/types-generator.ts";
+import { resolveDialect } from "./dialect.ts";
+import { generateIndex } from "./index-generator.ts";
+import { generateTypes } from "./types-generator.ts";
 
 const pg = resolveDialect("pg");
 const typesOutput = generateTypes(pg);

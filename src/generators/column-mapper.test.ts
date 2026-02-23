@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { mapFieldToColumn } from "../../src/generators/column-mapper.ts";
-import { resolveDialect } from "../../src/generators/dialect.ts";
-import type { FieldDef, TableDef } from "../../src/ir/types.ts";
+import { mapFieldToColumn } from "./column-mapper.ts";
+import { resolveDialect } from "./dialect.ts";
+import type { FieldDef, TableDef } from "../ir/types.ts";
 
 const pg = resolveDialect("pg");
 

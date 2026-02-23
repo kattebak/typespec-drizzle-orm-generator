@@ -1,12 +1,12 @@
 # EDD-001: TypeSpec Drizzle ORM Emitter — Phased Implementation Plan
 
-| Field          | Value                                                                  |
-| -------------- | ---------------------------------------------------------------------- |
-| **Status**     | In Progress — Phase 7 Complete                                         |
-| **Author(s)**  | —                                                                      |
-| **Created**    | 2026-02-17                                                             |
-| **Updated**    | 2026-02-17 (Phases 4–7 complete)                                       |
-| **RFC**        | [RFC: TypeSpec Drizzle ORM Emitter](RFC_typespec_emitter_for_drizzle_orm.md) |
+| Field         | Value                                                                        |
+| ------------- | ---------------------------------------------------------------------------- |
+| **Status**    | In Progress — Phase 7 Complete                                               |
+| **Author(s)** | —                                                                            |
+| **Created**   | 2026-02-17                                                                   |
+| **Updated**   | 2026-02-17 (Phases 4–7 complete)                                             |
+| **RFC**       | [RFC: TypeSpec Drizzle ORM Emitter](RFC_typespec_emitter_for_drizzle_orm.md) |
 
 ---
 
@@ -19,6 +19,7 @@ This document defines a phased implementation plan for the TypeSpec Drizzle ORM 
 ### 1.2 Scope
 
 **In scope:**
+
 - Intermediate representation (IR) for extracted TypeSpec metadata
 - Code generation functions for each output file (`schema.ts`, `relations.ts`, `describe.ts`, `types.ts`, `index.ts`)
 - Relation graph derivation algorithm
@@ -26,6 +27,7 @@ This document defines a phased implementation plan for the TypeSpec Drizzle ORM 
 - TypeSpec decorator and emitter wiring
 
 **Out of scope:**
+
 - Migration/trigger SQL generation (`@updatedAt` triggers) — deferred to a follow-up
 - Drizzle-kit integration
 - Multi-dialect output (the emitter targets PostgreSQL; SQLite is used only for testing)
@@ -33,12 +35,12 @@ This document defines a phased implementation plan for the TypeSpec Drizzle ORM 
 
 ### 1.3 Definitions
 
-| Term           | Definition                                                                                           |
-| -------------- | ---------------------------------------------------------------------------------------------------- |
+| Term           | Definition                                                                                            |
+| -------------- | ----------------------------------------------------------------------------------------------------- |
 | IR             | Intermediate Representation — typed data structures capturing entity metadata extracted from TypeSpec |
-| Relation Graph | Bidirectional map of entity relationships derived from `@references` and `@junction` annotations     |
-| Describe       | A generated query function that fetches an entity by PK with all its relations                       |
-| Junction       | A table that exists solely to support a many-to-many relationship between two entities               |
+| Relation Graph | Bidirectional map of entity relationships derived from `@references` and `@junction` annotations      |
+| Describe       | A generated query function that fetches an entity by PK with all its relations                        |
+| Junction       | A table that exists solely to support a many-to-many relationship between two entities                |
 
 ---
 
@@ -140,19 +142,18 @@ The emitter generates PostgreSQL-targeted code (`pgTable`, `base36Uuid`, `timest
 1. **Unit tests** — test code generators as pure `IR → string` functions. Assert on the generated code using string matching and snapshots.
 2. **Integration tests with SQLite** — maintain a hand-written SQLite Drizzle schema that mirrors the expected PostgreSQL output (the bookstore domain). Run real queries against an in-memory SQLite database to validate that the relation graph and describe query patterns are correct.
 
-This means the integration tests don't test the *generated strings* — they test the *patterns and algorithms* that produce those strings. When the relation graph algorithm says "Book has a many-to-many with Genre through BookGenre", the SQLite test proves this pattern actually works with real data.
+This means the integration tests don't test the _generated strings_ — they test the _patterns and algorithms_ that produce those strings. When the relation graph algorithm says "Book has a many-to-many with Genre through BookGenre", the SQLite test proves this pattern actually works with real data.
 
 ### 3.2 SQLite Test Infrastructure
 
 ```
-test/
+src/
   fixtures/
     bookstore-schema.ts    # SQLite Drizzle schema (mirrors expected pg output)
     bookstore-relations.ts # defineRelations for the bookstore domain
     bookstore-seed.ts      # Seed data: authors, books, genres, etc.
     db.ts                  # In-memory SQLite setup with drizzle()
   ir/
-    ir-types.test.ts       # IR construction tests
     relation-graph.test.ts # Relation graph algorithm tests
   generators/
     schema.test.ts         # schema.ts code generation tests
@@ -164,19 +165,19 @@ test/
 
 ### 3.3 Test Dependencies
 
-| Package               | Purpose                                          |
-| --------------------- | ------------------------------------------------ |
-| `drizzle-orm@beta`    | ORM v2 — `defineRelations` + `through()` support |
-| `better-sqlite3`      | Synchronous SQLite driver (in-memory `:memory:`) |
-| `@types/better-sqlite3` | TypeScript types for better-sqlite3            |
+| Package                 | Purpose                                          |
+| ----------------------- | ------------------------------------------------ |
+| `drizzle-orm@beta`      | ORM v2 — `defineRelations` + `through()` support |
+| `better-sqlite3`        | Synchronous SQLite driver (in-memory `:memory:`) |
+| `@types/better-sqlite3` | TypeScript types for better-sqlite3              |
 
 We use `better-sqlite3` for tests — it is synchronous, zero-config, and works with `drizzle-orm/better-sqlite3`. An in-memory database is created per test, ensuring isolation. The `drizzle-orm@beta` (1.0.0-beta.x) is required for the v2 `defineRelations` API with `through()` support.
 
 ```typescript
-// test/fixtures/db.ts
+// src/fixtures/db.ts
 import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
-import { relations } from "./bookstore-relations.ts";
+import { relations } from "./bookstore-relations.js";
 
 export function createTestDb() {
   const sqlite = new Database(":memory:");
@@ -194,12 +195,12 @@ export function createTestDb() {
 
 The v2 `defineRelations` API differs from the v1 `relations()` API in several ways that affect both the test infrastructure and the generated code:
 
-| Concern | v1 (stable 0.x) | v2 (beta 1.x) |
-| ------- | ---------------- | -------------- |
+| Concern             | v1 (stable 0.x)                   | v2 (beta 1.x)                              |
+| ------------------- | --------------------------------- | ------------------------------------------ |
 | Relation definition | Per-table `relations(table, ...)` | Centralized `defineRelations(schema, ...)` |
-| Drizzle setup | `drizzle(client, { schema })` | `drizzle({ client, relations })` |
-| `where` in queries | `eq(table.col, value)` | Object syntax: `{ colName: value }` |
-| Many-to-many | Manual junction traversal | `through()` on relation fields |
+| Drizzle setup       | `drizzle(client, { schema })`     | `drizzle({ client, relations })`           |
+| `where` in queries  | `eq(table.col, value)`            | Object syntax: `{ colName: value }`        |
+| Many-to-many        | Manual junction traversal         | `through()` on relation fields             |
 
 **Impact on generated `describe.ts`**: The describe functions should use the v2 object-based `where` syntax instead of `eq()`:
 
@@ -231,26 +232,26 @@ type UuidEncoding = "base36" | "canonical" | "raw";
 
 /** Column-level field definition extracted from a TypeSpec model property */
 interface FieldDef {
-  name: string;                       // TypeSpec property name (camelCase)
-  columnName: string;                 // SQL column name (snake_case)
-  type: FieldType;                    // Resolved column type
-  nullable: boolean;                  // true if property is optional (?)
+  name: string; // TypeSpec property name (camelCase)
+  columnName: string; // SQL column name (snake_case)
+  type: FieldType; // Resolved column type
+  nullable: boolean; // true if property is optional (?)
   uuid?: {
     encoding: UuidEncoding;
     autoGenerate: boolean;
   };
   references?: {
-    entityName: string;               // Target entity name
-    fieldName: string;                // Target field name
+    entityName: string; // Target entity name
+    fieldName: string; // Target field name
   };
   createdAt: boolean;
   updatedAt: boolean;
-  visibility?: "read";               // @visibility(Lifecycle.Read)
-  defaultValue?: unknown;            // TypeSpec default value
+  visibility?: "read"; // @visibility(Lifecycle.Read)
+  defaultValue?: unknown; // TypeSpec default value
   constraints?: {
     minValue?: number;
     maxValue?: number;
-    check?: string;                  // Raw SQL check expression
+    check?: string; // Raw SQL check expression
     unique?: boolean;
   };
 }
@@ -270,28 +271,28 @@ type FieldType =
 
 /** Primary key definition from @primaryKey decorator */
 interface PrimaryKeyDef {
-  tableName: string;                  // SQL table name
-  columns: string[];                  // Field names (not column names)
-  isComposite: boolean;               // true if columns.length > 1
+  tableName: string; // SQL table name
+  columns: string[]; // Field names (not column names)
+  isComposite: boolean; // true if columns.length > 1
 }
 
 /** Foreign key constraint from @foreignKey decorator */
 interface ForeignKeyDef {
   name: string;
-  columns: string[];                  // Local field names
-  foreignEntity: string;              // Target entity name
-  foreignColumns: string[];           // Target field names
+  columns: string[]; // Local field names
+  foreignEntity: string; // Target entity name
+  foreignColumns: string[]; // Target field names
 }
 
 /** Full entity definition extracted from a TypeSpec model */
 interface EntityDef {
-  name: string;                       // Entity name from @entity
-  service: string;                    // Service/schema grouping
-  tableName: string;                  // SQL table name from @primaryKey.name
+  name: string; // Entity name from @entity
+  service: string; // Service/schema grouping
+  tableName: string; // SQL table name from @primaryKey.name
   primaryKey: PrimaryKeyDef;
   fields: FieldDef[];
-  foreignKeys: ForeignKeyDef[];       // Composite FKs from @foreignKey
-  isJunction: boolean;                // true if @junction
+  foreignKeys: ForeignKeyDef[]; // Composite FKs from @foreignKey
+  isJunction: boolean; // true if @junction
   indexes: IndexDef[];
   uniqueConstraints: UniqueConstraintDef[];
 }
@@ -299,21 +300,21 @@ interface EntityDef {
 /** Index definition from @index decorator */
 interface IndexDef {
   name: string;
-  columns: string[];                  // Field names
+  columns: string[]; // Field names
   unique: boolean;
 }
 
 /** Composite unique constraint from @unique({ name, columns }) */
 interface UniqueConstraintDef {
   name: string;
-  columns: string[];                  // Field names
+  columns: string[]; // Field names
 }
 
 /** Enum definition extracted from a TypeSpec enum */
 interface EnumDef {
-  name: string;                       // TypeSpec enum name
-  sqlName: string;                    // PostgreSQL type name (snake_case)
-  values: string[];                   // Enum member values
+  name: string; // TypeSpec enum name
+  sqlName: string; // PostgreSQL type name (snake_case)
+  values: string[]; // Enum member values
 }
 ```
 
@@ -325,33 +326,33 @@ interface EnumDef {
 /** A one-to-one or many-to-one relation (FK holder side) */
 interface OneRelation {
   kind: "one";
-  name: string;                       // Relation name (e.g., "author")
-  fromEntity: string;                 // Source entity (FK holder)
-  fromField: string;                  // Source field name
-  toEntity: string;                   // Target entity
-  toField: string;                    // Target field name
-  optional: boolean;                  // true if FK field is nullable
+  name: string; // Relation name (e.g., "author")
+  fromEntity: string; // Source entity (FK holder)
+  fromField: string; // Source field name
+  toEntity: string; // Target entity
+  toField: string; // Target field name
+  optional: boolean; // true if FK field is nullable
 }
 
 /** A one-to-many reverse relation */
 interface ManyRelation {
   kind: "many";
-  name: string;                       // Relation name (e.g., "books")
-  entity: string;                     // The "many" side entity
+  name: string; // Relation name (e.g., "books")
+  entity: string; // The "many" side entity
 }
 
 /** A many-to-many through junction relation */
 interface ManyThroughRelation {
   kind: "many-through";
-  name: string;                       // Relation name (e.g., "genres")
-  fromEntity: string;                 // This entity
-  fromField: string;                  // This entity's PK field
-  toEntity: string;                   // Target entity
-  toField: string;                    // Target entity's PK field
+  name: string; // Relation name (e.g., "genres")
+  fromEntity: string; // This entity
+  fromField: string; // This entity's PK field
+  toEntity: string; // Target entity
+  toField: string; // Target entity's PK field
   junction: {
-    entity: string;                   // Junction entity name
-    fromField: string;                // Junction FK to this entity
-    toField: string;                  // Junction FK to target entity
+    entity: string; // Junction entity name
+    fromField: string; // Junction FK to this entity
+    toField: string; // Junction FK to target entity
   };
 }
 
@@ -391,23 +392,28 @@ No runtime dependencies — `drizzle-orm` and `better-sqlite3` are dev-only (use
 
 #### 5.1.2 Deliverables
 
-| File                                 | Type   | Description                               |
-| ------------------------------------ | ------ | ----------------------------------------- |
-| `src/ir/types.ts`                    | Create | IR type definitions (Section 4.1)         |
-| `src/ir/relation-graph.ts`           | Create | Relation graph types + builder function   |
-| `test/fixtures/bookstore-schema.ts`  | Create | SQLite bookstore schema                   |
-| `test/fixtures/bookstore-relations.ts` | Create | defineRelations for bookstore           |
-| `test/fixtures/bookstore-seed.ts`    | Create | Seed data for all bookstore entities      |
-| `test/fixtures/db.ts`               | Create | createTestDb() helper                     |
-| `test/integration/smoke.test.ts`    | Create | Smoke test: create DB, seed, query        |
+| File                                  | Type   | Description                             |
+| ------------------------------------- | ------ | --------------------------------------- |
+| `src/ir/types.ts`                     | Create | IR type definitions (Section 4.1)       |
+| `src/ir/relation-graph.ts`            | Create | Relation graph types + builder function |
+| `src/fixtures/bookstore-schema.ts`    | Create | SQLite bookstore schema                 |
+| `src/fixtures/bookstore-relations.ts` | Create | defineRelations for bookstore           |
+| `src/fixtures/bookstore-seed.ts`      | Create | Seed data for all bookstore entities    |
+| `src/fixtures/db.ts`                  | Create | createTestDb() helper                   |
+| `src/integration/smoke.test.ts`       | Create | Smoke test: create DB, seed, query      |
 
 #### 5.1.3 SQLite Bookstore Schema (test fixture)
 
 The bookstore schema from the RFC, translated to SQLite. This serves as the "expected output" reference — it's what the emitter should generate (modulo pg→sqlite dialect differences).
 
 ```typescript
-// test/fixtures/bookstore-schema.ts
-import { sqliteTable, text, integer, primaryKey } from "drizzle-orm/sqlite-core";
+// src/fixtures/bookstore-schema.ts
+import {
+  sqliteTable,
+  text,
+  integer,
+  primaryKey,
+} from "drizzle-orm/sqlite-core";
 
 export const authors = sqliteTable("authors", {
   authorId: text("author_id").primaryKey(),
@@ -421,7 +427,9 @@ export const authors = sqliteTable("authors", {
 
 export const books = sqliteTable("books", {
   bookId: text("book_id").primaryKey(),
-  authorId: text("author_id").notNull().references(() => authors.authorId),
+  authorId: text("author_id")
+    .notNull()
+    .references(() => authors.authorId),
   title: text("title").notNull(),
   originalLanguage: text("original_language").notNull(),
   publicationYear: integer("publication_year").notNull(),
@@ -435,6 +443,7 @@ export const books = sqliteTable("books", {
 ```
 
 Key differences from the PostgreSQL version:
+
 - `text()` instead of `base36Uuid()` — SQLite has no native UUID type
 - `text()` instead of `timestamp()` — SQLite stores timestamps as text
 - No `.defaultRandom()` — UUIDs generated in seed data, not by the DB
@@ -443,7 +452,7 @@ Key differences from the PostgreSQL version:
 #### 5.1.4 Smoke Test
 
 ```typescript
-// test/integration/smoke.test.ts
+// src/integration/smoke.test.ts
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { createTestDb, seedBookstore } from "../fixtures/db.ts";
@@ -477,7 +486,7 @@ describe("SQLite bookstore smoke test", () => {
 - **Q-01**: `better-sqlite3` chosen — synchronous, zero-config, works well
 - **Q-03**: `defineRelations` + `through()` confirmed working on SQLite with `drizzle-orm@beta`
 
-**Tests implemented** (8 smoke tests in `test/integration/smoke.test.ts`):
+**Tests implemented** (8 smoke tests in `src/integration/smoke.test.ts`):
 
 1. Author with books (one-to-many)
 2. Book with author (many-to-one)
@@ -514,13 +523,13 @@ function mapFieldToColumn(field: FieldDef, entity: EntityDef): string {
 }
 ```
 
-| Input                                            | Output                                                          |
-| ------------------------------------------------ | --------------------------------------------------------------- |
-| `{ type: { kind: "text" }, nullable: false }`    | `text("col_name").notNull()`                                    |
-| `{ type: { kind: "uuid" }, uuid.autoGenerate }`  | `base36Uuid("col_name").primaryKey().defaultRandom()`           |
-| `{ type: { kind: "integer" }, nullable: true }`  | `integer("col_name")`                                           |
-| `{ type: { kind: "timestamp" }, createdAt }`     | `timestamp("col_name", { withTimezone: true }).notNull().defaultNow()` |
-| `{ type: { kind: "enum" }, ... }`                | `bookFormatEnum("col_name").notNull()`                          |
+| Input                                           | Output                                                                 |
+| ----------------------------------------------- | ---------------------------------------------------------------------- |
+| `{ type: { kind: "text" }, nullable: false }`   | `text("col_name").notNull()`                                           |
+| `{ type: { kind: "uuid" }, uuid.autoGenerate }` | `base36Uuid("col_name").primaryKey().defaultRandom()`                  |
+| `{ type: { kind: "integer" }, nullable: true }` | `integer("col_name")`                                                  |
+| `{ type: { kind: "timestamp" }, createdAt }`    | `timestamp("col_name", { withTimezone: true }).notNull().defaultNow()` |
+| `{ type: { kind: "enum" }, ... }`               | `bookFormatEnum("col_name").notNull()`                                 |
 
 #### 5.2.2 Schema Generator
 
@@ -539,14 +548,14 @@ function generateSchema(entities: EntityDef[], enums: EnumDef[]): string {
 
 #### 5.2.3 Deliverables
 
-| File                                    | Type   | Description                                    |
-| --------------------------------------- | ------ | ---------------------------------------------- |
-| `src/generators/naming.ts`              | Create | camelCase ↔ snake_case + pluralization utils   |
-| `src/generators/column-mapper.ts`       | Create | FieldDef → Drizzle column code string          |
-| `src/generators/schema-generator.ts`    | Create | EntityDef[] → complete schema.ts content       |
-| `test/fixtures/bookstore-ir.ts`         | Create | Bookstore domain as IR (test fixture for all generator tests) |
-| `test/generators/column-mapper.test.ts` | Create | Column mapping unit tests (19 tests)           |
-| `test/generators/schema.test.ts`        | Create | Schema generation tests (14 tests)             |
+| File                                   | Type   | Description                                                   |
+| -------------------------------------- | ------ | ------------------------------------------------------------- |
+| `src/generators/naming.ts`             | Create | camelCase ↔ snake_case + pluralization utils                  |
+| `src/generators/column-mapper.ts`      | Create | FieldDef → Drizzle column code string                         |
+| `src/generators/schema-generator.ts`   | Create | EntityDef[] → complete schema.ts content                      |
+| `src/fixtures/bookstore-ir.ts`         | Create | Bookstore domain as IR (test fixture for all generator tests) |
+| `src/generators/column-mapper.test.ts` | Create | Column mapping unit tests (19 tests)                          |
+| `src/generators/schema.test.ts`        | Create | Schema generation tests (14 tests)                            |
 
 #### 5.2.4 Test Approach
 
@@ -569,7 +578,10 @@ describe("column mapper", () => {
 
   it("maps a uuid primary key with auto-generation", () => {
     // ...
-    assert.equal(result, 'base36Uuid("author_id").primaryKey().defaultRandom()');
+    assert.equal(
+      result,
+      'base36Uuid("author_id").primaryKey().defaultRandom()',
+    );
   });
 });
 ```
@@ -586,6 +598,7 @@ Schema generation tests compare against expected multi-line strings for each ent
 #### 5.2.6 Phase 2 Results
 
 **Signature discovery:** `mapFieldToColumn` requires `(field, entity)` — not just `field`. The entity context is needed to determine:
+
 - Whether a field is a single-column PK (emit `.primaryKey()`) vs composite PK (handled at table level)
 - Whether to skip `.notNull()` on PK fields (PKs are implicitly not null)
 
@@ -598,6 +611,7 @@ Schema generation tests compare against expected multi-line strings for each ent
 **Tests implemented** (33 new tests: 19 column mapper + 14 schema generator):
 
 Column mapper coverage:
+
 - All 9 base types: text, varchar, integer, bigint, real, doublePrecision, boolean, timestamp, enum
 - UUID variants: PK with autoGenerate, FK without autoGenerate, nullable FK
 - Timestamp variants: @createdAt, @updatedAt, plain timestamp
@@ -605,6 +619,7 @@ Column mapper coverage:
 - Default values (numeric and string)
 
 Schema generator coverage:
+
 - All 9 bookstore entities individually verified
 - Import generation (pg-core + base36Uuid)
 - pgEnum declaration
@@ -654,13 +669,13 @@ function generateRelations(
 
 #### 5.3.3 Deliverables
 
-| File                                    | Type   | Description                                       |
-| --------------------------------------- | ------ | ------------------------------------------------- |
-| `src/ir/relation-graph.ts`              | Modify | Add `buildRelationGraph()` implementation         |
-| `src/generators/relations-generator.ts` | Create | RelationGraph → relations.ts code                 |
-| `test/ir/relation-graph.test.ts`        | Create | Graph algorithm unit tests                        |
-| `test/generators/relations.test.ts`     | Create | Relations code generation tests                   |
-| `test/integration/relations.test.ts`    | Create | SQLite: query related data through defineRelations |
+| File                                    | Type   | Description                                        |
+| --------------------------------------- | ------ | -------------------------------------------------- |
+| `src/ir/relation-graph.ts`              | Modify | Add `buildRelationGraph()` implementation          |
+| `src/generators/relations-generator.ts` | Create | RelationGraph → relations.ts code                  |
+| `src/ir/relation-graph.test.ts`         | Create | Graph algorithm unit tests                         |
+| `src/generators/relations.test.ts`      | Create | Relations code generation tests                    |
+| `src/integration/relations.test.ts`     | Create | SQLite: query related data through defineRelations |
 
 #### 5.3.4 Test Approach — Unit Tests
 
@@ -673,7 +688,7 @@ describe("buildRelationGraph", () => {
     const bookRelations = graph.get("Book");
 
     // Book should have a "one" relation to Author
-    const authorRel = bookRelations?.find(r => r.name === "author");
+    const authorRel = bookRelations?.find((r) => r.name === "author");
     assert.deepEqual(authorRel, {
       kind: "one",
       name: "author",
@@ -686,7 +701,7 @@ describe("buildRelationGraph", () => {
 
     // Author should have a "many" reverse to Book
     const authorRelations = graph.get("Author");
-    const booksRel = authorRelations?.find(r => r.name === "books");
+    const booksRel = authorRelations?.find((r) => r.name === "books");
     assert.equal(booksRel?.kind, "many");
   });
 
@@ -694,7 +709,7 @@ describe("buildRelationGraph", () => {
     const graph = buildRelationGraph(bookstoreEntities);
     const bookRelations = graph.get("Book");
 
-    const genresRel = bookRelations?.find(r => r.name === "genres");
+    const genresRel = bookRelations?.find((r) => r.name === "genres");
     assert.equal(genresRel?.kind, "many-through");
     assert.equal(genresRel?.junction.entity, "BookGenre");
   });
@@ -750,6 +765,7 @@ describe("bookstore relations (SQLite)", () => {
 **Tests implemented** (52 new tests: 3 deriveOneRelationName + 20 relation graph + 16 relations generator + 13 integration):
 
 Relation graph coverage:
+
 - All 9 entities have graph entries
 - Author: 1 relation (many books)
 - Book: 5 relations (one author + many bookTags/editions/reviews + many-through genres)
@@ -762,12 +778,14 @@ Relation graph coverage:
 - Review: 1 relation (one book)
 
 Relations generator coverage:
+
 - Import generation (drizzle-orm + schema)
 - defineRelations wrapper structure
 - All 9 entity relation blocks with correct `r.one`, `r.many`, `r.many.through()` syntax
 - Structural validation (balanced braces/parens)
 
 Integration test coverage:
+
 - One-to-many (Author → Books)
 - Many-to-one (Book → Author)
 - Many-to-many through junction (Book ↔ Genre, bidirectional)
@@ -792,10 +810,7 @@ Integration test coverage:
 ```typescript
 // src/generators/describe-generator.ts
 
-function generateDescribe(
-  entities: EntityDef[],
-  graph: RelationGraph,
-): string {
+function generateDescribe(entities: EntityDef[], graph: RelationGraph): string {
   // For each non-junction entity:
   //   1. Generate the Description type alias
   //   2. Generate the describe function using findFirst + with
@@ -807,11 +822,11 @@ function generateDescribe(
 
 #### 5.4.2 Deliverables
 
-| File                                    | Type   | Description                                      |
-| --------------------------------------- | ------ | ------------------------------------------------ |
-| `src/generators/describe-generator.ts`  | Create | EntityDef[] + RelationGraph → describe.ts code   |
-| `test/generators/describe.test.ts`      | Create | Describe code generation unit tests              |
-| `test/integration/describe.test.ts`     | Create | SQLite: run describe-equivalent queries          |
+| File                                   | Type   | Description                                    |
+| -------------------------------------- | ------ | ---------------------------------------------- |
+| `src/generators/describe-generator.ts` | Create | EntityDef[] + RelationGraph → describe.ts code |
+| `src/generators/describe.test.ts`      | Create | Describe code generation unit tests            |
+| `src/integration/describe.test.ts`     | Create | SQLite: run describe-equivalent queries        |
 
 #### 5.4.3 Test Approach — SQLite Integration
 
@@ -886,7 +901,8 @@ describe("describe queries (SQLite)", () => {
 
 **Tests implemented** (32 new tests: 22 unit + 10 integration):
 
-Unit test coverage (`test/generators/describe.test.ts`):
+Unit test coverage (`src/generators/describe.test.ts`):
+
 - Import generation (DrizzleClient + schema)
 - Junction entity exclusion (BookGenre)
 - All 8 non-junction entity Description types with correct relation fields
@@ -894,7 +910,8 @@ Unit test coverage (`test/generators/describe.test.ts`):
 - Structural validation (balanced braces/parens)
 - Entity count validation (8 describe functions, 8 Description types)
 
-Integration test coverage (`test/integration/describe.test.ts`):
+Integration test coverage (`src/integration/describe.test.ts`):
+
 - All 8 non-junction entities queried by PK with full relation loading
 - Nullable FK handling (Edition.translator returns null)
 - Non-existent PK returns undefined
@@ -960,8 +977,8 @@ function assemblePackage(
 | `src/generators/types-generator.ts` | Create | Config → types.ts content                |
 | `src/generators/index-generator.ts` | Create | Re-export barrel file                    |
 | `src/assembler.ts`                  | Create | Full package assembly                    |
-| `test/generators/types.test.ts`     | Create | Types generation tests                   |
-| `test/integration/assembly.test.ts` | Create | Full assembly test with bookstore domain |
+| `src/generators/types.test.ts`      | Create | Types generation tests                   |
+| `src/integration/assembly.test.ts`  | Create | Full assembly test with bookstore domain |
 
 #### 5.5.4 Exit Criteria
 
@@ -981,17 +998,20 @@ function assemblePackage(
 
 **Tests implemented** (27 new tests: 8 types + 4 index + 15 assembly):
 
-Types generator coverage (`test/generators/types.test.ts`):
+Types generator coverage (`src/generators/types.test.ts`):
+
 - `customType` import from drizzle-orm/pg-core
 - `short-uuid` import and base36 translator
 - `base36Uuid` custom type export with `dataType`, `toDriver`, `fromDriver`
 - `DrizzleClient` type alias export
 - `relations` type import for DrizzleClient
 
-Index generator coverage (`test/generators/types.test.ts`):
+Index generator coverage (`src/generators/types.test.ts`):
+
 - Re-exports for types, schema, relations, describe modules
 
-Assembly coverage (`test/integration/assembly.test.ts`):
+Assembly coverage (`src/integration/assembly.test.ts`):
+
 - File count (exactly 6 files)
 - All expected filenames present
 - package.json: name, version, exports, dependencies
@@ -1034,15 +1054,28 @@ Each decorator extracts metadata and stores it in the TypeSpec program's state:
 // src/decorators.ts
 import { DecoratorContext, Model, ModelProperty } from "@typespec/compiler";
 
-export function $entity(context: DecoratorContext, target: Model, name: string, service: string) {
+export function $entity(
+  context: DecoratorContext,
+  target: Model,
+  name: string,
+  service: string,
+) {
   context.program.stateMap(StateKeys.entity).set(target, { name, service });
 }
 
-export function $primaryKey(context: DecoratorContext, target: Model, options: { name: string; columns: ModelProperty[] }) {
+export function $primaryKey(
+  context: DecoratorContext,
+  target: Model,
+  options: { name: string; columns: ModelProperty[] },
+) {
   context.program.stateMap(StateKeys.primaryKey).set(target, options);
 }
 
-export function $references(context: DecoratorContext, target: ModelProperty, ref: ModelProperty) {
+export function $references(
+  context: DecoratorContext,
+  target: ModelProperty,
+  ref: ModelProperty,
+) {
   context.program.stateMap(StateKeys.references).set(target, ref);
 }
 
@@ -1055,7 +1088,10 @@ export function $references(context: DecoratorContext, target: ModelProperty, re
 ```typescript
 // src/ir/builder.ts
 
-function buildIR(program: Program): { entities: EntityDef[]; enums: EnumDef[] } {
+function buildIR(program: Program): {
+  entities: EntityDef[];
+  enums: EnumDef[];
+} {
   // Iterates all models with @entity state
   // Reads @primaryKey, @references, @junction, @uuid, etc. from state maps
   // Constructs EntityDef[] and EnumDef[]
@@ -1089,16 +1125,16 @@ export async function $onEmit(context: EmitContext<EmitterOptions>) {
 
 #### 5.6.5 Deliverables
 
-| File                               | Type   | Description                              |
-| ---------------------------------- | ------ | ---------------------------------------- |
-| `src/lib.ts`                       | Create | TypeSpec library definition + StateKeys  |
-| `src/decorators.ts`                | Create | All decorator implementations            |
-| `src/decorators.tsp`               | Create | TypeSpec decorator declarations          |
-| `src/ir/builder.ts`                | Create | TypeSpec program → IR extraction         |
-| `src/index.ts`                     | Modify | Replace placeholder with $onEmit        |
-| `test/typespec/decorators.test.ts` | Create | Decorator extraction tests               |
-| `test/typespec/emitter.test.ts`    | Create | End-to-end: .tsp → generated files      |
-| `test/fixtures/bookstore.tsp`      | Create | Full bookstore TypeSpec source           |
+| File                         | Type   | Description                             |
+| ---------------------------- | ------ | --------------------------------------- |
+| `src/lib.ts`                 | Create | TypeSpec library definition + StateKeys |
+| `src/decorators.ts`          | Create | All decorator implementations           |
+| `src/decorators.tsp`         | Create | TypeSpec decorator declarations         |
+| `src/ir/builder.ts`          | Create | TypeSpec program → IR extraction        |
+| `src/index.ts`               | Modify | Replace placeholder with $onEmit        |
+| `src/decorators.test.ts`     | Create | Decorator extraction tests              |
+| `src/ir/builder.test.ts`     | Create | End-to-end: .tsp → generated files      |
+| `src/fixtures/bookstore.tsp` | Create | Full bookstore TypeSpec source          |
 
 #### 5.6.6 Test Approach
 
@@ -1107,7 +1143,7 @@ TypeSpec integration tests use the compiler API to compile `.tsp` files programm
 ```typescript
 describe("emitter end-to-end", () => {
   it("compiles the bookstore TypeSpec and generates all output files", async () => {
-    const program = await compile("test/fixtures/bookstore.tsp", {
+    const program = await compile("src/fixtures/bookstore.tsp", {
       emit: ["typespec-drizzle-orm-generator"],
       options: {
         "typespec-drizzle-orm-generator": {
@@ -1138,12 +1174,14 @@ describe("emitter end-to-end", () => {
 #### 5.6.8 Phase 6 Results
 
 **Decorator design simplification:** The EDD/RFC specified `@primaryKey({ name: "authors", columns: [Author.authorId] })` with an object parameter containing a `ModelProperty[]`. TypeSpec's `extern dec` mechanism does not easily support anonymous model types with `ModelProperty` arrays as parameters. Simplified to two cooperating decorators:
+
 - `@primaryKey("authors")` on the model — stores the SQL table name
 - `@pk` on individual properties — marks PK columns
 
 This captures the same information and is more idiomatic TypeSpec.
 
 **Mock-based testing approach:** The project uses `noEmit: true` with `--experimental-strip-types`, meaning there is no compiled JavaScript output. TypeSpec's test infrastructure (`createTestLibrary`, `createTestRunner`) requires compiled `.js` files for the emitter library. Instead of adding a build step, all TypeSpec integration tests use mock `Program` objects:
+
 - A `ProgramStateAccess` interface abstracts the state access (`stateMap`, `stateSet`)
 - Tests call real decorator functions to populate state maps/sets
 - The IR builder reads from these same state maps, verifying the full decorator → IR pipeline
@@ -1153,7 +1191,8 @@ This captures the same information and is more idiomatic TypeSpec.
 
 **Tests implemented** (29 new tests: 10 decorator + 12 IR builder + 6 end-to-end + 3 export verification - note: 2 tests overlap with index.test.ts rewrite):
 
-Decorator test coverage (`test/typespec/decorators.test.ts`):
+Decorator test coverage (`src/decorators.test.ts`):
+
 - `$entity` stores name and service in state map
 - `$primaryKey` stores table name in state map
 - `$pk` adds property to state set
@@ -1163,7 +1202,8 @@ Decorator test coverage (`test/typespec/decorators.test.ts`):
 - `$createdAt` and `$updatedAt` add to state sets
 - Multiple decorators on same property
 
-IR builder coverage (`test/typespec/emitter.test.ts`):
+IR builder coverage (`src/ir/builder.test.ts`):
+
 - Extracts all 9 bookstore entities from mock state
 - Correct entity names, table names, PK definitions
 - Author: 7 fields with correct types, createdAt/updatedAt timestamps
@@ -1173,7 +1213,8 @@ IR builder coverage (`test/typespec/emitter.test.ts`):
 - snake_case column name generation
 - Empty enums array for base bookstore domain
 
-End-to-end coverage (`test/typespec/emitter.test.ts`):
+End-to-end coverage (`src/ir/builder.test.ts`):
+
 - Full pipeline: decorators → IR builder → assemblePackage → 6 output files
 - schema.ts contains all 9 pgTable declarations
 - relations.ts contains defineRelations with all entities
@@ -1191,17 +1232,17 @@ End-to-end coverage (`test/typespec/emitter.test.ts`):
 
 #### 5.7.1 Deliverables
 
-| Feature                      | Files                                    | Test                                       |
-| ---------------------------- | ---------------------------------------- | ------------------------------------------ |
-| `@unique` (single column)   | `src/decorators.ts`, `schema-generator`  | Unit: correct `.unique()` in output        |
-| `@unique({ columns })`      | `src/decorators.ts`, `schema-generator`  | Unit: correct `uniqueIndex()` in output    |
-| `@check(expression)`        | `src/decorators.ts`, `schema-generator`  | Unit: correct `check()` constraint         |
-| `@index({ name, columns })` | `src/decorators.ts`, `schema-generator`  | Unit: correct `index()` in output          |
-| `@minValue`/`@maxValue`     | `src/ir/builder.ts`, `schema-generator`  | Unit: emits CHECK constraint               |
-| Enum generation              | `src/ir/builder.ts`, `schema-generator`  | Unit: correct `pgEnum()` output            |
-| `@foreignKey` (composite)   | `src/decorators.ts`, `schema-generator`  | Unit: composite FK in table definition     |
-| `@visibility(Lifecycle.Read)`| `src/decorators.ts`, `describe-generator`| Unit: read-only typing in Description type |
-| Default values               | `src/ir/builder.ts`, `schema-generator`  | Unit: `.default()` in output               |
+| Feature                       | Files                                     | Test                                       |
+| ----------------------------- | ----------------------------------------- | ------------------------------------------ |
+| `@unique` (single column)     | `src/decorators.ts`, `schema-generator`   | Unit: correct `.unique()` in output        |
+| `@unique({ columns })`        | `src/decorators.ts`, `schema-generator`   | Unit: correct `uniqueIndex()` in output    |
+| `@check(expression)`          | `src/decorators.ts`, `schema-generator`   | Unit: correct `check()` constraint         |
+| `@index({ name, columns })`   | `src/decorators.ts`, `schema-generator`   | Unit: correct `index()` in output          |
+| `@minValue`/`@maxValue`       | `src/ir/builder.ts`, `schema-generator`   | Unit: emits CHECK constraint               |
+| Enum generation               | `src/ir/builder.ts`, `schema-generator`   | Unit: correct `pgEnum()` output            |
+| `@foreignKey` (composite)     | `src/decorators.ts`, `schema-generator`   | Unit: composite FK in table definition     |
+| `@visibility(Lifecycle.Read)` | `src/decorators.ts`, `describe-generator` | Unit: read-only typing in Description type |
+| Default values                | `src/ir/builder.ts`, `schema-generator`   | Unit: `.default()` in output               |
 
 #### 5.7.2 SQLite Integration Tests for Constraints
 
@@ -1242,6 +1283,7 @@ describe("constraints (SQLite)", () => {
 **IR builder updates:** `src/ir/builder.ts` now extracts all new decorator states, detects TypeSpec `Enum` kinds, collects `EnumDef[]` with deduplication, populates `field.constraints`, `field.visibility`, and `field.defaultValue`, and builds entity-level `uniqueConstraints`, `indexes`, and `foreignKeys` from model-level state.
 
 **Schema generator updates:** `src/generators/schema-generator.ts` emits:
+
 - `pgEnum()` declarations for extracted enums
 - `.unique()` for single-column unique constraints
 - `uniqueIndex()` for composite unique constraints
@@ -1253,6 +1295,7 @@ describe("constraints (SQLite)", () => {
 **Column mapper update:** `src/generators/column-mapper.ts` emits `.unique()` for fields with `constraints.unique`.
 
 **Bookstore fixture updates:**
+
 - Added `BookFormat` enum to `bookstoreEnums` in IR fixture
 - Added `format` enum field to Edition entity
 - Added `constraints: { unique: true }` on Book.isbn
@@ -1263,6 +1306,7 @@ describe("constraints (SQLite)", () => {
 - Seed data updated with `format` values for editions
 
 **Test coverage (230 tests, 17 suites, 0 failures):**
+
 - 12 new decorator tests (all 8 new decorators + accumulation + combination tests)
 - 16 new schema generator tests (CHECK, uniqueIndex, index, foreignKey, pgEnum, .unique(), .default())
 - 11 new SQLite constraint enforcement tests (unique, composite unique, FK, CHECK, composite PK)
@@ -1273,42 +1317,42 @@ describe("constraints (SQLite)", () => {
 
 ## 6. File Map (all phases)
 
-| File Path                                  | Phase | Type   | Description                            |
-| ------------------------------------------ | ----- | ------ | -------------------------------------- |
-| `src/ir/types.ts`                          | 1     | Create | IR type definitions                    |
-| `src/ir/relation-graph.ts`                 | 1+3   | Create | Relation graph types + builder         |
-| `src/ir/builder.ts`                        | 6     | Create | TypeSpec → IR extraction               |
-| `src/generators/naming.ts`                 | 2     | Create | Naming convention utilities            |
-| `src/generators/column-mapper.ts`          | 2     | Create | Field → column code mapping            |
-| `src/generators/schema-generator.ts`       | 2     | Create | Entity[] → schema.ts                   |
-| `src/generators/relations-generator.ts`    | 3     | Create | Graph → relations.ts                   |
-| `src/generators/describe-generator.ts`     | 4     | Create | Entity[] + graph → describe.ts         |
-| `src/generators/types-generator.ts`        | 5     | Create | Config → types.ts                      |
-| `src/generators/index-generator.ts`        | 5     | Create | Re-export barrel                       |
-| `src/assembler.ts`                         | 5     | Create | Full package assembly                  |
-| `src/lib.ts`                               | 6     | Create | TypeSpec library + StateKeys           |
-| `src/decorators.ts`                        | 6     | Create | Decorator implementations              |
-| `src/decorators.tsp`                       | 6     | Create | TypeSpec decorator declarations        |
-| `src/index.ts`                             | 6     | Modify | $onEmit entry point                    |
-| `test/fixtures/bookstore-schema.ts`        | 1     | Create | SQLite bookstore schema                |
-| `test/fixtures/bookstore-relations.ts`     | 1     | Create | defineRelations for bookstore          |
-| `test/fixtures/bookstore-seed.ts`          | 1     | Create | Seed data                              |
-| `test/fixtures/db.ts`                      | 1     | Create | createTestDb helper                    |
-| `test/fixtures/bookstore-ir.ts`            | 2     | Create | Bookstore domain as IR (test fixture)  |
-| `test/fixtures/bookstore.tsp`              | 6     | Create | Bookstore TypeSpec source              |
-| `test/integration/smoke.test.ts`           | 1     | Create | SQLite smoke test                      |
-| `test/integration/relations.test.ts`       | 3     | Create | Relation query tests                   |
-| `test/integration/describe.test.ts`        | 4     | Create | Describe query pattern tests           |
-| `test/integration/assembly.test.ts`        | 5     | Create | Full assembly test                     |
-| `test/integration/constraints.test.ts`     | 7     | Create | Constraint enforcement tests           |
-| `test/ir/relation-graph.test.ts`           | 3     | Create | Graph algorithm unit tests             |
-| `test/generators/column-mapper.test.ts`    | 2     | Create | Column mapping tests                   |
-| `test/generators/schema.test.ts`           | 2     | Create | Schema generation tests                |
-| `test/generators/relations.test.ts`        | 3     | Create | Relations generation tests             |
-| `test/generators/describe.test.ts`         | 4     | Create | Describe generation tests              |
-| `test/generators/types.test.ts`            | 5     | Create | Types generation tests                 |
-| `test/typespec/decorators.test.ts`         | 6     | Create | Decorator extraction tests             |
-| `test/typespec/emitter.test.ts`            | 6     | Create | End-to-end emitter tests               |
+| File Path                               | Phase | Type   | Description                           |
+| --------------------------------------- | ----- | ------ | ------------------------------------- |
+| `src/ir/types.ts`                       | 1     | Create | IR type definitions                   |
+| `src/ir/relation-graph.ts`              | 1+3   | Create | Relation graph types + builder        |
+| `src/ir/builder.ts`                     | 6     | Create | TypeSpec → IR extraction              |
+| `src/generators/naming.ts`              | 2     | Create | Naming convention utilities           |
+| `src/generators/column-mapper.ts`       | 2     | Create | Field → column code mapping           |
+| `src/generators/schema-generator.ts`    | 2     | Create | Entity[] → schema.ts                  |
+| `src/generators/relations-generator.ts` | 3     | Create | Graph → relations.ts                  |
+| `src/generators/describe-generator.ts`  | 4     | Create | Entity[] + graph → describe.ts        |
+| `src/generators/types-generator.ts`     | 5     | Create | Config → types.ts                     |
+| `src/generators/index-generator.ts`     | 5     | Create | Re-export barrel                      |
+| `src/assembler.ts`                      | 5     | Create | Full package assembly                 |
+| `src/lib.ts`                            | 6     | Create | TypeSpec library + StateKeys          |
+| `src/decorators.ts`                     | 6     | Create | Decorator implementations             |
+| `src/decorators.tsp`                    | 6     | Create | TypeSpec decorator declarations       |
+| `src/index.ts`                          | 6     | Modify | $onEmit entry point                   |
+| `src/fixtures/bookstore-schema.ts`      | 1     | Create | SQLite bookstore schema               |
+| `src/fixtures/bookstore-relations.ts`   | 1     | Create | defineRelations for bookstore         |
+| `src/fixtures/bookstore-seed.ts`        | 1     | Create | Seed data                             |
+| `src/fixtures/db.ts`                    | 1     | Create | createTestDb helper                   |
+| `src/fixtures/bookstore-ir.ts`          | 2     | Create | Bookstore domain as IR (test fixture) |
+| `src/fixtures/bookstore.tsp`            | 6     | Create | Bookstore TypeSpec source             |
+| `src/integration/smoke.test.ts`         | 1     | Create | SQLite smoke test                     |
+| `src/integration/relations.test.ts`     | 3     | Create | Relation query tests                  |
+| `src/integration/describe.test.ts`      | 4     | Create | Describe query pattern tests          |
+| `src/integration/assembly.test.ts`      | 5     | Create | Full assembly test                    |
+| `src/integration/constraints.test.ts`   | 7     | Create | Constraint enforcement tests          |
+| `src/ir/relation-graph.test.ts`         | 3     | Create | Graph algorithm unit tests            |
+| `src/generators/column-mapper.test.ts`  | 2     | Create | Column mapping tests                  |
+| `src/generators/schema.test.ts`         | 2     | Create | Schema generation tests               |
+| `src/generators/relations.test.ts`      | 3     | Create | Relations generation tests            |
+| `src/generators/describe.test.ts`       | 4     | Create | Describe generation tests             |
+| `src/generators/types.test.ts`          | 5     | Create | Types generation tests                |
+| `src/decorators.test.ts`                | 6     | Create | Decorator extraction tests            |
+| `src/ir/builder.test.ts`                | 6     | Create | End-to-end emitter tests              |
 
 ---
 
@@ -1346,14 +1390,14 @@ Phase 7 fills in remaining features and edge cases.
 
 ## 8. Open Questions
 
-| ID   | Question                                                                                          | Status   | Resolution |
-| ---- | ------------------------------------------------------------------------------------------------- | -------- | ---------- |
-| Q-01 | Should `better-sqlite3` or `@libsql/client` be used for test SQLite?                              | Resolved | `better-sqlite3` — synchronous, zero-config, validated in Phase 1 |
-| Q-02 | Should the generated code use template literals or an AST builder (e.g., ts-morph)?               | Resolved | Template literals — validated in Phase 2. String concatenation with helper functions produces clean, readable output matching the RFC exactly. No AST builder needed. |
-| Q-03 | Drizzle v2 `defineRelations` + `through()` for SQLite — is it supported?                          | Resolved | Yes — requires `drizzle-orm@beta` (1.0.0-beta.x). Validated in Phase 1 smoke test. See Section 3.4 for v2 API differences. |
-| Q-04 | Should the IR be serializable (JSON) to enable snapshot testing of the full IR?                    | Resolved | No — current coverage is sufficient. Generators test the IR indirectly (correct output implies correct IR). The `bookstore-ir.ts` fixture serves as the canonical IR reference. Snapshot tests would add brittleness without meaningful signal. |
-| Q-05 | How to handle the `DrizzleClient` type in `describe.ts` — import from generated types or inline?  | Resolved | Imported from generated `types.ts` via `import type { DrizzleClient } from "./types.js"`. The type is derived using `Parameters<typeof relations.applyTo>[0]`. |
-| Q-06 | Generated `describe.ts` must use v2 object-based `where` syntax — does this affect the `describeX(id)` function signatures? | Resolved | Functions take a typed id param (e.g., `bookId: string`). Query internals use v2 object syntax `where: { bookId }`. No impact on function signatures. |
+| ID   | Question                                                                                                                    | Status   | Resolution                                                                                                                                                                                                                                      |
+| ---- | --------------------------------------------------------------------------------------------------------------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Q-01 | Should `better-sqlite3` or `@libsql/client` be used for test SQLite?                                                        | Resolved | `better-sqlite3` — synchronous, zero-config, validated in Phase 1                                                                                                                                                                               |
+| Q-02 | Should the generated code use template literals or an AST builder (e.g., ts-morph)?                                         | Resolved | Template literals — validated in Phase 2. String concatenation with helper functions produces clean, readable output matching the RFC exactly. No AST builder needed.                                                                           |
+| Q-03 | Drizzle v2 `defineRelations` + `through()` for SQLite — is it supported?                                                    | Resolved | Yes — requires `drizzle-orm@beta` (1.0.0-beta.x). Validated in Phase 1 smoke test. See Section 3.4 for v2 API differences.                                                                                                                      |
+| Q-04 | Should the IR be serializable (JSON) to enable snapshot testing of the full IR?                                             | Resolved | No — current coverage is sufficient. Generators test the IR indirectly (correct output implies correct IR). The `bookstore-ir.ts` fixture serves as the canonical IR reference. Snapshot tests would add brittleness without meaningful signal. |
+| Q-05 | How to handle the `DrizzleClient` type in `describe.ts` — import from generated types or inline?                            | Resolved | Imported from generated `types.ts` via `import type { DrizzleClient } from "./types.js"`. The type is derived using `Parameters<typeof relations.applyTo>[0]`.                                                                                  |
+| Q-06 | Generated `describe.ts` must use v2 object-based `where` syntax — does this affect the `describeX(id)` function signatures? | Resolved | Functions take a typed id param (e.g., `bookId: string`). Query internals use v2 object syntax `where: { bookId }`. No impact on function signatures.                                                                                           |
 
 ---
 

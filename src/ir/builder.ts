@@ -196,30 +196,33 @@ export function buildIR(program: ProgramStateAccess): {
     const compositeUniques = compositeUniqueState.get(model) as CompositeUniqueMeta[] | undefined;
     const uniqueConstraints: UniqueConstraintDef[] = (compositeUniques ?? []).map((cu) => ({
       name: cu.name,
-      columns: cu.columns.map((c) => c.name),
+      columns: normalizeModelPropertyArray(cu.columns, "composite unique columns").map(
+        (c) => c.name,
+      ),
     }));
 
     // Indexes
     const indexDefs = indexDefState.get(model) as IndexMeta[] | undefined;
     const indexes: IndexDef[] = (indexDefs ?? []).map((idx) => ({
       name: idx.name,
-      columns: idx.columns.map((c) => c.name),
+      columns: normalizeModelPropertyArray(idx.columns, "index columns").map((c) => c.name),
       unique: idx.unique,
     }));
 
     // Composite foreign keys
     const fkDefs = foreignKeyDefState.get(model) as ForeignKeyMeta[] | undefined;
     const foreignKeys: ForeignKeyDef[] = (fkDefs ?? []).map((fk) => {
-      const foreignModel = fk.foreignColumns[0]?.model;
+      const foreignColumns = normalizeModelPropertyArray(fk.foreignColumns, "foreign key columns");
+      const foreignModel = foreignColumns[0]?.model;
       const foreignTableMeta = foreignModel
         ? (tableState.get(foreignModel) as TableMeta | undefined)
         : undefined;
 
       return {
         name: fk.name,
-        columns: fk.columns.map((c) => c.name),
+        columns: normalizeModelPropertyArray(fk.columns, "foreign key columns").map((c) => c.name),
         foreignTable: foreignTableMeta?.name ?? "",
-        foreignColumns: fk.foreignColumns.map((c) => c.name),
+        foreignColumns: foreignColumns.map((c) => c.name),
       };
     });
 
@@ -237,6 +240,33 @@ export function buildIR(program: ProgramStateAccess): {
   }
 
   return { tables, enums };
+}
+
+function normalizeModelPropertyArray(value: unknown, label: string): ModelProperty[] {
+  if (Array.isArray(value)) {
+    if (value.every(isModelPropertyLike)) return value as ModelProperty[];
+    throw new Error(`Invalid ${label}: expected ModelProperty[]`);
+  }
+
+  if (isTupleValue(value)) {
+    return normalizeModelPropertyArray(value.values, label);
+  }
+
+  if (isModelPropertyLike(value)) return [value as ModelProperty];
+
+  throw new Error(`Invalid ${label}: expected ModelProperty or ModelProperty[]`);
+}
+
+function isModelPropertyLike(value: unknown): value is ModelProperty {
+  if (typeof value !== "object" || value === null) return false;
+  const obj = value as Record<string, unknown>;
+  return typeof obj.name === "string";
+}
+
+function isTupleValue(value: unknown): value is { values: unknown[] } {
+  if (typeof value !== "object" || value === null) return false;
+  const obj = value as Record<string, unknown>;
+  return Array.isArray(obj.values);
 }
 
 function resolveFieldType(prop: ModelProperty, uuidMeta: UuidMeta | undefined): FieldType {

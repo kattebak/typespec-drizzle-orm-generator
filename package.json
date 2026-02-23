@@ -30,7 +30,7 @@
     "lint": "biome check .",
     "fix": "biome check --write .",
     "format": "biome format --write .",
-    "test": "node --test --import=tsx 'test/**/*.test.ts'",
+    "test": "node --test --import=tsx 'src/**/*.test.ts'",
     "pretest": "npm run check",
     "prepublishOnly": "npm run build"
   },

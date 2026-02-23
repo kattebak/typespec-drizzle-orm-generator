@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { assemblePackage } from "../../src/assembler.ts";
+import { assemblePackage } from "../assembler.ts";
 import { bookstoreEnums, bookstoreTables } from "../fixtures/bookstore-ir.ts";
 
 const config = {
