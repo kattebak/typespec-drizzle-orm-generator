@@ -57,12 +57,12 @@ describe("package assembly", () => {
     assert.equal(pkg.exports["."].types, "./index.d.ts");
   });
 
-  it("package.json includes drizzle-orm and short-uuid dependencies", () => {
+  it("package.json includes short-uuid dependency and drizzle-orm peerDependency", () => {
     const content = files.get("package.json");
     assert.ok(content);
     const pkg = JSON.parse(content);
-    assert.ok(pkg.dependencies["drizzle-orm"]);
     assert.ok(pkg.dependencies["short-uuid"]);
+    assert.equal(pkg.peerDependencies["drizzle-orm"], ">=1.0.0-beta.1");
   });
 
   // ===========================================
