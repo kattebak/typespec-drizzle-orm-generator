@@ -388,14 +388,45 @@ describe("column mapper (sqlite)", () => {
     assert.equal(mapFieldToColumn(field, table, sqlite), 'text("name", { length: 256 }).notNull()');
   });
 
-  it("maps enum field to text", () => {
+  it("maps enum field to text with enum constraint", () => {
     const field = makeField({
       name: "format",
       columnName: "format",
       type: { kind: "enum", enumName: "bookFormatEnum", values: ["hardcover", "paperback"] },
     });
     const table = makeTable(["id"]);
-    assert.equal(mapFieldToColumn(field, table, sqlite), 'text("format").notNull()');
+    assert.equal(
+      mapFieldToColumn(field, table, sqlite),
+      'text("format", { enum: ["hardcover", "paperback"] }).notNull()',
+    );
+  });
+
+  it("maps nullable enum field to text with enum constraint", () => {
+    const field = makeField({
+      name: "format",
+      columnName: "format",
+      type: { kind: "enum", enumName: "bookFormatEnum", values: ["hardcover", "paperback"] },
+      nullable: true,
+    });
+    const table = makeTable(["id"]);
+    assert.equal(
+      mapFieldToColumn(field, table, sqlite),
+      'text("format", { enum: ["hardcover", "paperback"] })',
+    );
+  });
+
+  it("maps enum field with default value", () => {
+    const field = makeField({
+      name: "status",
+      columnName: "status",
+      type: { kind: "enum", enumName: "statusEnum", values: ["draft", "published"] },
+      defaultValue: "draft",
+    });
+    const table = makeTable(["id"]);
+    assert.equal(
+      mapFieldToColumn(field, table, sqlite),
+      'text("status", { enum: ["draft", "published"] }).notNull().default("draft")',
+    );
   });
 
   it("maps uuid field to base36Uuid", () => {
