@@ -53,8 +53,10 @@ function generatePackageJson(config: EmitterConfig): string {
       },
     },
     dependencies: {
-      "drizzle-orm": "^1.0.0",
       "short-uuid": "^5.2.0",
+    },
+    peerDependencies: {
+      "drizzle-orm": ">=1.0.0-beta.1",
     },
   };
 
