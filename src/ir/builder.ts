@@ -102,9 +102,7 @@ export function buildIR(program: ProgramStateAccess): {
 
     const tableMeta = meta as TableMeta;
     const pkMeta = pkTableState.get(model) as PrimaryKeyMeta | undefined;
-    if (!pkMeta) continue;
-
-    const tableName = pkMeta.tableName;
+    const tableName = pkMeta?.tableName ?? tableMeta.name;
     const isJunction = junctionState.has(model);
 
     const fields: FieldDef[] = [];
