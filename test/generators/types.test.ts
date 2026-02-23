@@ -40,12 +40,25 @@ describe("types generator", () => {
     );
   });
 
-  it("exports DrizzleClient type alias", () => {
-    assert.ok(typesOutput.includes("export type DrizzleClient ="));
+  it("exports DrizzleClient type alias using PgAsyncDatabase", () => {
+    assert.ok(typesOutput.includes("export type DrizzleClient = PgAsyncDatabase<"));
+  });
+
+  it("imports PgAsyncDatabase and PgQueryResultHKT for DrizzleClient type", () => {
+    assert.ok(
+      typesOutput.includes(
+        'import type { PgAsyncDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";',
+      ),
+    );
   });
 
   it("imports relations for DrizzleClient type", () => {
     assert.ok(typesOutput.includes('import type { relations } from "./relations.js";'));
+  });
+
+  it("exports generateBase36Id function", () => {
+    assert.ok(typesOutput.includes("export function generateBase36Id(): string {"));
+    assert.ok(typesOutput.includes("return translator.new();"));
   });
 });
 
@@ -85,5 +98,19 @@ describe("types generator (sqlite)", () => {
 
   it("includes sqlite-specific comment", () => {
     assert.ok(output.includes("stored as text"));
+  });
+
+  it("exports DrizzleClient type alias using BaseSQLiteDatabase", () => {
+    assert.ok(output.includes("export type DrizzleClient = BaseSQLiteDatabase<"));
+  });
+
+  it("imports BaseSQLiteDatabase for DrizzleClient type", () => {
+    assert.ok(
+      output.includes('import type { BaseSQLiteDatabase } from "drizzle-orm/sqlite-core";'),
+    );
+  });
+
+  it("exports generateBase36Id function", () => {
+    assert.ok(output.includes("export function generateBase36Id(): string {"));
   });
 });

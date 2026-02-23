@@ -47,7 +47,11 @@ function generateImports(tables: TableDef[], enums: EnumDef[], dialect: DialectC
   }
 
   if (hasUuidFields(tables)) {
-    lines.push(importDecl(["base36Uuid"], "./types.js"));
+    const typesImports = ["base36Uuid"];
+    if (hasAutoGenerateUuid(tables)) {
+      typesImports.push("generateBase36Id");
+    }
+    lines.push(importDecl(typesImports, "./types.js"));
   }
 
   return lines.join("\n");
@@ -168,6 +172,10 @@ function hasCheckConstraints(table: TableDef): boolean {
 
 function hasUuidFields(tables: TableDef[]): boolean {
   return tables.some((t) => t.fields.some((f) => f.uuid));
+}
+
+function hasAutoGenerateUuid(tables: TableDef[]): boolean {
+  return tables.some((t) => t.fields.some((f) => f.uuid?.autoGenerate));
 }
 
 function generateEnumDeclaration(enumDef: EnumDef, enumFn: string): string {

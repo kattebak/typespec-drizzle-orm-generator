@@ -13,7 +13,7 @@ describe("schema generator", () => {
     const output = generateSchema(bookstoreTables, bookstoreEnums, pg);
 
     assert.ok(output.includes('from "drizzle-orm/pg-core"'));
-    assert.ok(output.includes('import { base36Uuid } from "./types.js"'));
+    assert.ok(output.includes('import { base36Uuid, generateBase36Id } from "./types.js"'));
     assert.ok(output.includes("pgTable,"));
     assert.ok(output.includes("integer,"));
     assert.ok(output.includes("text,"));
@@ -57,7 +57,11 @@ describe("schema generator", () => {
     const output = generateSchema(bookstoreTables, bookstoreEnums, pg);
 
     assert.ok(output.includes('export const authors = pgTable("authors", {'));
-    assert.ok(output.includes('authorId: base36Uuid("author_id").primaryKey().defaultRandom(),'));
+    assert.ok(
+      output.includes(
+        'authorId: base36Uuid("author_id").primaryKey().$defaultFn(() => generateBase36Id()),',
+      ),
+    );
     assert.ok(output.includes('name: text("name").notNull(),'));
     assert.ok(output.includes('bio: text("bio"),'));
     assert.ok(output.includes('birthYear: integer("birth_year"),'));
@@ -80,7 +84,11 @@ describe("schema generator", () => {
     // Books now uses callback form due to index
     assert.ok(output.includes("export const books = pgTable("));
     assert.ok(output.includes('"books"'));
-    assert.ok(output.includes('bookId: base36Uuid("book_id").primaryKey().defaultRandom(),'));
+    assert.ok(
+      output.includes(
+        'bookId: base36Uuid("book_id").primaryKey().$defaultFn(() => generateBase36Id()),',
+      ),
+    );
     assert.ok(
       output.includes(
         'authorId: base36Uuid("author_id").notNull().references(() => authors.authorId),',
@@ -104,7 +112,11 @@ describe("schema generator", () => {
     const output = generateSchema(bookstoreTables, bookstoreEnums, pg);
 
     assert.ok(output.includes('export const genres = pgTable("genres", {'));
-    assert.ok(output.includes('genreId: base36Uuid("genre_id").primaryKey().defaultRandom(),'));
+    assert.ok(
+      output.includes(
+        'genreId: base36Uuid("genre_id").primaryKey().$defaultFn(() => generateBase36Id()),',
+      ),
+    );
     assert.ok(output.includes('description: text("description"),'));
   });
 
@@ -132,7 +144,9 @@ describe("schema generator", () => {
 
     assert.ok(output.includes('export const bookTags = pgTable("book_tags", {'));
     assert.ok(
-      output.includes('bookTagId: base36Uuid("book_tag_id").primaryKey().defaultRandom(),'),
+      output.includes(
+        'bookTagId: base36Uuid("book_tag_id").primaryKey().$defaultFn(() => generateBase36Id()),',
+      ),
     );
     assert.ok(
       output.includes('bookId: base36Uuid("book_id").notNull().references(() => books.bookId),'),
@@ -144,7 +158,9 @@ describe("schema generator", () => {
 
     assert.ok(output.includes('export const translators = pgTable("translators", {'));
     assert.ok(
-      output.includes('translatorId: base36Uuid("translator_id").primaryKey().defaultRandom(),'),
+      output.includes(
+        'translatorId: base36Uuid("translator_id").primaryKey().$defaultFn(() => generateBase36Id()),',
+      ),
     );
     assert.ok(output.includes('nativeLanguage: text("native_language").notNull(),'));
   });
@@ -154,7 +170,9 @@ describe("schema generator", () => {
 
     assert.ok(output.includes('export const publishers = pgTable("publishers", {'));
     assert.ok(
-      output.includes('publisherId: base36Uuid("publisher_id").primaryKey().defaultRandom(),'),
+      output.includes(
+        'publisherId: base36Uuid("publisher_id").primaryKey().$defaultFn(() => generateBase36Id()),',
+      ),
     );
     assert.ok(output.includes('country: text("country"),'));
     assert.ok(output.includes('founded: integer("founded"),'));
@@ -166,7 +184,11 @@ describe("schema generator", () => {
     // Editions now uses callback form due to composite unique
     assert.ok(output.includes("export const editions = pgTable("));
     assert.ok(output.includes('"editions"'));
-    assert.ok(output.includes('editionId: base36Uuid("edition_id").primaryKey().defaultRandom(),'));
+    assert.ok(
+      output.includes(
+        'editionId: base36Uuid("edition_id").primaryKey().$defaultFn(() => generateBase36Id()),',
+      ),
+    );
     assert.ok(
       output.includes('bookId: base36Uuid("book_id").notNull().references(() => books.bookId),'),
     );
@@ -198,7 +220,11 @@ describe("schema generator", () => {
     // Reviews now uses callback form due to CHECK constraint
     assert.ok(output.includes("export const reviews = pgTable("));
     assert.ok(output.includes('"reviews"'));
-    assert.ok(output.includes('reviewId: base36Uuid("review_id").primaryKey().defaultRandom(),'));
+    assert.ok(
+      output.includes(
+        'reviewId: base36Uuid("review_id").primaryKey().$defaultFn(() => generateBase36Id()),',
+      ),
+    );
     assert.ok(
       output.includes('bookId: base36Uuid("book_id").notNull().references(() => books.bookId),'),
     );

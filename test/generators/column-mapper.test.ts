@@ -161,7 +161,7 @@ describe("column mapper", () => {
     const table = makeTable(["authorId"]);
     assert.equal(
       mapFieldToColumn(field, table, pg),
-      'base36Uuid("author_id").primaryKey().defaultRandom()',
+      'base36Uuid("author_id").primaryKey().$defaultFn(() => generateBase36Id())',
     );
   });
 
@@ -408,7 +408,7 @@ describe("column mapper (sqlite)", () => {
     const table = makeTable(["authorId"]);
     assert.equal(
       mapFieldToColumn(field, table, sqlite),
-      'base36Uuid("author_id").primaryKey().defaultRandom()',
+      'base36Uuid("author_id").primaryKey().$defaultFn(() => generateBase36Id())',
     );
   });
 });

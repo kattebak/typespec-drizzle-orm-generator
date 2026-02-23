@@ -6,7 +6,7 @@ export function generateTypes(dialect: DialectConfig): string {
 
   sections.push(importDecl(["customType"], dialect.coreModule));
   sections.push(`import short from ${quoted("short-uuid")};`);
-  sections.push(importDecl(["relations"], "./relations.js", { type: true }));
+  sections.push(...drizzleClientImports(dialect));
   sections.push("");
 
   sections.push(`const translator = ${fnCall("short", ["short.constants.uuid25Base36"])};`);
@@ -28,9 +28,34 @@ export function generateTypes(dialect: DialectConfig): string {
   sections.push(exportConst("base36Uuid", `customType${typeParam}(${configObj})`));
   sections.push("");
 
+  sections.push("export function generateBase36Id(): string {");
+  sections.push("  return translator.new();");
+  sections.push("}");
+  sections.push("");
+
   sections.push("/** Drizzle client type for use in describe function signatures */");
-  sections.push("export type DrizzleClient = Parameters<typeof relations.applyTo>[0];");
+  sections.push(drizzleClientType(dialect));
   sections.push("");
 
   return sections.join("\n");
+}
+
+function drizzleClientImports(dialect: DialectConfig): string[] {
+  if (dialect.dialect === "sqlite") {
+    return [
+      importDecl(["BaseSQLiteDatabase"], "drizzle-orm/sqlite-core", { type: true }),
+      importDecl(["relations"], "./relations.js", { type: true }),
+    ];
+  }
+  return [
+    importDecl(["PgAsyncDatabase", "PgQueryResultHKT"], "drizzle-orm/pg-core", { type: true }),
+    importDecl(["relations"], "./relations.js", { type: true }),
+  ];
+}
+
+function drizzleClientType(dialect: DialectConfig): string {
+  if (dialect.dialect === "sqlite") {
+    return 'export type DrizzleClient = BaseSQLiteDatabase<"sync" | "async", unknown, Record<string, unknown>, typeof relations>;';
+  }
+  return "export type DrizzleClient = PgAsyncDatabase<PgQueryResultHKT, Record<string, unknown>, typeof relations>;";
 }
