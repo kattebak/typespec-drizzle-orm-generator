@@ -1,5 +1,5 @@
 import { exportConst, fnCall, importDecl, quoted } from "../codegen/index.js";
-import type { DialectConfig } from "./dialect.js";
+import type { DialectConfig, NullableWrapperDef } from "./dialect.js";
 
 export function generateTypes(dialect: DialectConfig): string {
   const sections: string[] = [];
@@ -33,6 +33,11 @@ export function generateTypes(dialect: DialectConfig): string {
   sections.push("}");
   sections.push("");
 
+  for (const wrapper of dialect.nullableWrappers) {
+    sections.push(generateNullableWrapper(wrapper));
+    sections.push("");
+  }
+
   sections.push("/** Drizzle client type for use in describe function signatures */");
   sections.push(drizzleClientType(dialect));
   sections.push("");
@@ -51,6 +56,17 @@ function drizzleClientImports(dialect: DialectConfig): string[] {
     importDecl(["PgAsyncDatabase", "PgQueryResultHKT"], "drizzle-orm/pg-core", { type: true }),
     importDecl(["relations"], "./relations.js", { type: true }),
   ];
+}
+
+function generateNullableWrapper(wrapper: NullableWrapperDef): string {
+  const typeParam = `<{\n  data: ${wrapper.jsType} | undefined;\n  driverData: ${wrapper.jsType} | null;\n}>`;
+  const configObj = [
+    "{",
+    `  dataType: () => ${quoted(wrapper.dataType)},`,
+    `  fromDriver: (v) => v ?? undefined,`,
+    "}",
+  ].join("\n");
+  return exportConst(wrapper.name, `customType${typeParam}(${configObj})`);
 }
 
 function drizzleClientType(dialect: DialectConfig): string {

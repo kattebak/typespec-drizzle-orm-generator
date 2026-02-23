@@ -13,7 +13,11 @@ describe("schema generator", () => {
     const output = generateSchema(bookstoreTables, bookstoreEnums, pg);
 
     assert.ok(output.includes('from "drizzle-orm/pg-core"'));
-    assert.ok(output.includes('import { base36Uuid, generateBase36Id } from "./types.js"'));
+    assert.ok(output.includes('from "./types.js"'));
+    assert.ok(output.includes("base36Uuid"));
+    assert.ok(output.includes("generateBase36Id"));
+    assert.ok(output.includes("nullableInteger"));
+    assert.ok(output.includes("nullableText"));
     assert.ok(output.includes("pgTable,"));
     assert.ok(output.includes("integer,"));
     assert.ok(output.includes("text,"));
@@ -63,9 +67,9 @@ describe("schema generator", () => {
       ),
     );
     assert.ok(output.includes('name: text("name").notNull(),'));
-    assert.ok(output.includes('bio: text("bio"),'));
-    assert.ok(output.includes('birthYear: integer("birth_year"),'));
-    assert.ok(output.includes('nationality: text("nationality"),'));
+    assert.ok(output.includes('bio: nullableText("bio"),'));
+    assert.ok(output.includes('birthYear: nullableInteger("birth_year"),'));
+    assert.ok(output.includes('nationality: nullableText("nationality"),'));
     assert.ok(
       output.includes(
         'createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),',
@@ -98,8 +102,8 @@ describe("schema generator", () => {
     assert.ok(output.includes('originalLanguage: text("original_language").notNull(),'));
     assert.ok(output.includes('publicationYear: integer("publication_year").notNull(),'));
     // isbn has .unique()
-    assert.ok(output.includes('isbn: text("isbn").unique(),'));
-    assert.ok(output.includes('pageCount: integer("page_count"),'));
+    assert.ok(output.includes('isbn: nullableText("isbn").unique(),'));
+    assert.ok(output.includes('pageCount: nullableInteger("page_count"),'));
     // Index in callback
     assert.ok(
       output.includes(
@@ -117,7 +121,7 @@ describe("schema generator", () => {
         'genreId: base36Uuid("genre_id").primaryKey().$defaultFn(() => generateBase36Id()),',
       ),
     );
-    assert.ok(output.includes('description: text("description"),'));
+    assert.ok(output.includes('description: nullableText("description"),'));
   });
 
   it("generates bookGenres junction table with composite PK", () => {
@@ -174,8 +178,8 @@ describe("schema generator", () => {
         'publisherId: base36Uuid("publisher_id").primaryKey().$defaultFn(() => generateBase36Id()),',
       ),
     );
-    assert.ok(output.includes('country: text("country"),'));
-    assert.ok(output.includes('founded: integer("founded"),'));
+    assert.ok(output.includes('country: nullableText("country"),'));
+    assert.ok(output.includes('founded: nullableInteger("founded"),'));
   });
 
   it("generates editions table with FKs, enum field, and composite unique", () => {
@@ -206,7 +210,7 @@ describe("schema generator", () => {
     // Enum field
     assert.ok(output.includes('format: bookFormatEnum("format").notNull(),'));
     assert.ok(output.includes('language: text("language").notNull(),'));
-    assert.ok(output.includes('isbn: text("isbn"),'));
+    assert.ok(output.includes('isbn: nullableText("isbn"),'));
     assert.ok(output.includes('publicationYear: integer("publication_year").notNull(),'));
     // Composite unique constraint
     assert.ok(
@@ -229,7 +233,7 @@ describe("schema generator", () => {
       output.includes('bookId: base36Uuid("book_id").notNull().references(() => books.bookId),'),
     );
     assert.ok(output.includes('rating: integer("rating").notNull(),'));
-    assert.ok(output.includes('text: text("text"),'));
+    assert.ok(output.includes('text: nullableText("text"),'));
     assert.ok(output.includes('reviewerName: text("reviewer_name").notNull(),'));
     assert.ok(
       output.includes('reviewDate: timestamp("review_date", { withTimezone: true }).notNull(),'),
