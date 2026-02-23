@@ -18,8 +18,8 @@ export interface EmitterConfig {
 /**
  * Assembles the complete output package from IR.
  *
- * Returns a Map<filename, content> for all 6 output files:
- *   package.json, types.ts, schema.ts, relations.ts, describe.ts, index.ts
+ * Returns a Map<filename, content> for all 7 output files:
+ *   package.json, tsconfig.json, types.ts, schema.ts, relations.ts, describe.ts, index.ts
  */
 export function assemblePackage(
   tables: TableDef[],
@@ -31,6 +31,7 @@ export function assemblePackage(
 
   return new Map([
     ["package.json", generatePackageJson(config)],
+    ["tsconfig.json", generateTsConfig()],
     ["types.ts", generateTypes(dialect)],
     ["schema.ts", generateSchema(tables, enums, dialect, config.pluralize)],
     ["relations.ts", generateRelations(tables, graph, config.pluralize)],
@@ -44,21 +45,41 @@ function generatePackageJson(config: EmitterConfig): string {
     name: config.packageName,
     version: config.packageVersion,
     type: "module",
-    main: "index.js",
-    types: "index.d.ts",
+    main: "dist/index.js",
+    types: "dist/index.d.ts",
     exports: {
       ".": {
-        types: "./index.d.ts",
-        import: "./index.js",
+        types: "./dist/index.d.ts",
+        import: "./dist/index.js",
       },
+    },
+    scripts: {
+      build: "tsc",
+      prepare: "tsc",
     },
     dependencies: {
       "short-uuid": "^5.2.0",
     },
     peerDependencies: {
       "drizzle-orm": ">=1.0.0-beta.1",
+      typescript: ">=5.0.0",
     },
   };
 
   return `${JSON.stringify(pkg, null, 2)}\n`;
+}
+
+function generateTsConfig(): string {
+  const tsconfig = {
+    compilerOptions: {
+      target: "ESNext",
+      module: "NodeNext",
+      declaration: true,
+      skipLibCheck: true,
+      outDir: "dist",
+    },
+    include: ["*.ts"],
+  };
+
+  return `${JSON.stringify(tsconfig, null, 2)}\n`;
 }

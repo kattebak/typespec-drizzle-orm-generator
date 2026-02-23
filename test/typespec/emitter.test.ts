@@ -608,9 +608,10 @@ describe("end-to-end: decorators → IR builder → assemblePackage", () => {
 
   const files = assemblePackage(ir.tables, ir.enums, config);
 
-  it("produces all 6 output files", () => {
-    assert.equal(files.size, 6);
+  it("produces all 7 output files", () => {
+    assert.equal(files.size, 7);
     assert.ok(files.has("package.json"));
+    assert.ok(files.has("tsconfig.json"));
     assert.ok(files.has("types.ts"));
     assert.ok(files.has("schema.ts"));
     assert.ok(files.has("relations.ts"));
