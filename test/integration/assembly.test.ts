@@ -14,7 +14,7 @@ const files = assemblePackage(bookstoreTables, bookstoreEnums, config);
 
 describe("package assembly", () => {
   // ===========================================
-  // All 6 files generated
+  // All 7 files generated
   // ===========================================
 
   it("produces exactly 7 files", () => {
@@ -54,8 +54,16 @@ describe("package assembly", () => {
     assert.ok(content);
     const pkg = JSON.parse(content);
     assert.ok(pkg.exports["."]);
-    assert.equal(pkg.exports["."].import, "./index.js");
-    assert.equal(pkg.exports["."].types, "./index.d.ts");
+    assert.equal(pkg.exports["."].import, "./dist/index.js");
+    assert.equal(pkg.exports["."].types, "./dist/index.d.ts");
+  });
+
+  it("package.json includes build and prepare scripts", () => {
+    const content = files.get("package.json");
+    assert.ok(content);
+    const pkg = JSON.parse(content);
+    assert.equal(pkg.scripts.build, "tsc");
+    assert.equal(pkg.scripts.prepare, "tsc");
   });
 
   it("package.json includes build and prepare scripts", () => {
@@ -86,6 +94,7 @@ describe("package assembly", () => {
     assert.equal(tsconfig.compilerOptions.module, "NodeNext");
     assert.equal(tsconfig.compilerOptions.declaration, true);
     assert.equal(tsconfig.compilerOptions.skipLibCheck, true);
+    assert.equal(tsconfig.compilerOptions.outDir, "dist");
   });
 
   // ===========================================

@@ -18,8 +18,8 @@ export interface EmitterConfig {
 /**
  * Assembles the complete output package from IR.
  *
- * Returns a Map<filename, content> for all 6 output files:
- *   package.json, types.ts, schema.ts, relations.ts, describe.ts, index.ts
+ * Returns a Map<filename, content> for all 7 output files:
+ *   package.json, tsconfig.json, types.ts, schema.ts, relations.ts, describe.ts, index.ts
  */
 export function assemblePackage(
   tables: TableDef[],
@@ -45,12 +45,12 @@ function generatePackageJson(config: EmitterConfig): string {
     name: config.packageName,
     version: config.packageVersion,
     type: "module",
-    main: "index.js",
-    types: "index.d.ts",
+    main: "dist/index.js",
+    types: "dist/index.d.ts",
     exports: {
       ".": {
-        types: "./index.d.ts",
-        import: "./index.js",
+        types: "./dist/index.d.ts",
+        import: "./dist/index.js",
       },
     },
     scripts: {
@@ -74,12 +74,9 @@ function generateTsConfig(): string {
     compilerOptions: {
       target: "ESNext",
       module: "NodeNext",
-      moduleResolution: "NodeNext",
       declaration: true,
-      strict: true,
-      esModuleInterop: true,
       skipLibCheck: true,
-      outDir: ".",
+      outDir: "dist",
     },
     include: ["*.ts"],
   };
