@@ -30,7 +30,7 @@ export function mapFieldToColumn(
   }
 
   if (field.createdAt || field.updatedAt) {
-    calls.push({ method: dialect.mapTimestampDefault() });
+    calls.push(dialect.mapTimestampDefault());
   }
 
   if (field.constraints?.unique) {
