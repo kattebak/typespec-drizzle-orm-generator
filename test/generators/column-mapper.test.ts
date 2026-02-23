@@ -355,7 +355,7 @@ describe("column mapper (sqlite)", () => {
     const table = makeTable(["id"]);
     assert.equal(
       mapFieldToColumn(field, table, sqlite),
-      'integer("created_at", { mode: "timestamp" }).notNull().defaultNow()',
+      'integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date())',
     );
   });
 

@@ -1,3 +1,4 @@
+import type { ChainMethod } from "../codegen/index.js";
 import { fnCall, objectLiteral, quoted } from "../codegen/index.js";
 import type { FieldDef } from "../ir/types.js";
 
@@ -10,7 +11,7 @@ export interface DialectConfig {
   enumFn: string | null;
   uuidDataType: string;
   mapFieldType(field: FieldDef): string;
-  mapTimestampDefault(): string;
+  mapTimestampDefault(): ChainMethod;
 }
 
 export function resolveDialect(dialect: Dialect): DialectConfig {
@@ -29,7 +30,7 @@ function pgDialect(): DialectConfig {
     tableFn: "pgTable",
     enumFn: "pgEnum",
     uuidDataType: "uuid",
-    mapTimestampDefault: () => "defaultNow",
+    mapTimestampDefault: () => ({ method: "defaultNow" }),
     mapFieldType(field: FieldDef): string {
       const col = quoted(field.columnName);
       switch (field.type.kind) {
@@ -74,7 +75,7 @@ function sqliteDialect(): DialectConfig {
     tableFn: "sqliteTable",
     enumFn: null,
     uuidDataType: "text",
-    mapTimestampDefault: () => "defaultNow",
+    mapTimestampDefault: () => ({ method: "$defaultFn", args: ["() => new Date()"] }),
     mapFieldType(field: FieldDef): string {
       const col = quoted(field.columnName);
       switch (field.type.kind) {
