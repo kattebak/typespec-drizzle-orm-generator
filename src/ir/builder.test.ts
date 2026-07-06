@@ -4,8 +4,10 @@ import type { DecoratorContext, Model, ModelProperty } from "@typespec/compiler"
 import { Numeric } from "@typespec/compiler";
 import { assemblePackage } from "../assembler.ts";
 import {
+  $check,
   $compositeUnique,
   $createdAt,
+  $foreignKeyDef,
   $indexDef,
   $junction,
   $maxValue,
@@ -18,6 +20,7 @@ import {
   $updatedAt,
   $uuid,
 } from "../decorators.ts";
+import { StateKeys } from "../lib.ts";
 import { buildIR, type ProgramStateAccess } from "./builder.ts";
 
 /**
@@ -855,5 +858,486 @@ describe("resolution: real-world field types (buildIR)", () => {
     const sourceTable = tables.find((t) => t.name === "Source");
     const fkField = sourceTable?.fields.find((f) => f.name === "targetId");
     assert.equal(fkField?.references?.onDelete, "cascade");
+  });
+
+  it("ignores a @references whose target model is not a @table", () => {
+    const program = createMockProgram();
+    const ctx = mockContext(program);
+
+    // Target model exists and is referenced, but was never marked @table.
+    const target: MockModel = { kind: "Model", name: "Loose", properties: new Map() };
+    const looseId: MockProp = {
+      kind: "ModelProperty",
+      name: "looseId",
+      type: mockScalar("string"),
+      optional: false,
+      model: target,
+    };
+    target.properties.set("looseId", looseId);
+
+    const source: MockModel = { kind: "Model", name: "Source", properties: new Map() };
+    const sourceId: MockProp = {
+      kind: "ModelProperty",
+      name: "sourceId",
+      type: mockScalar("string"),
+      optional: false,
+      model: source,
+    };
+    const fk: MockProp = {
+      kind: "ModelProperty",
+      name: "looseId",
+      type: mockScalar("string"),
+      optional: false,
+      model: source,
+    };
+    source.properties.set("sourceId", sourceId);
+    source.properties.set("looseId", fk);
+    $table(ctx, source as unknown as Model, "Source", "test");
+    $pk(ctx, sourceId as unknown as ModelProperty);
+    $references(ctx, fk as unknown as ModelProperty, looseId as unknown as ModelProperty);
+
+    const { tables } = buildIR(program);
+    const fkField = tables
+      .find((t) => t.name === "Source")
+      ?.fields.find((f) => f.name === "looseId");
+    assert.equal(fkField?.references, undefined);
+  });
+
+  it("leaves a composite foreign key's foreignTable empty when the target is not a @table", () => {
+    const program = createMockProgram();
+    const ctx = mockContext(program);
+
+    const target: MockModel = { kind: "Model", name: "Loose", properties: new Map() };
+    const tA: MockProp = {
+      kind: "ModelProperty",
+      name: "a",
+      type: mockScalar("string"),
+      optional: false,
+      model: target,
+    };
+    target.properties.set("a", tA);
+
+    const source: MockModel = { kind: "Model", name: "Source", properties: new Map() };
+    const sA: MockProp = {
+      kind: "ModelProperty",
+      name: "a",
+      type: mockScalar("string"),
+      optional: false,
+      model: source,
+    };
+    source.properties.set("a", sA);
+    $table(ctx, source as unknown as Model, "Source", "test");
+    $foreignKeyDef(
+      ctx,
+      source as unknown as Model,
+      "loose_fk",
+      [sA] as unknown as ModelProperty[],
+      [tA] as unknown as ModelProperty[],
+    );
+
+    const { tables } = buildIR(program);
+    assert.equal(tables.find((t) => t.name === "Source")?.foreignKeys[0].foreignTable, "");
+  });
+
+  it("maps a RESTRICT @references onDelete to restrict", () => {
+    const program = createMockProgram();
+    const ctx = mockContext(program);
+
+    const target: MockModel = { kind: "Model", name: "Target", properties: new Map() };
+    const targetId: MockProp = {
+      kind: "ModelProperty",
+      name: "targetId",
+      type: mockScalar("string"),
+      optional: false,
+      model: target,
+    };
+    target.properties.set("targetId", targetId);
+    $table(ctx, target as unknown as Model, "Target", "test");
+    $pk(ctx, targetId as unknown as ModelProperty);
+
+    const source: MockModel = { kind: "Model", name: "Source", properties: new Map() };
+    const sourceId: MockProp = {
+      kind: "ModelProperty",
+      name: "sourceId",
+      type: mockScalar("string"),
+      optional: false,
+      model: source,
+    };
+    const fk: MockProp = {
+      kind: "ModelProperty",
+      name: "targetId",
+      type: mockScalar("string"),
+      optional: false,
+      model: source,
+    };
+    source.properties.set("sourceId", sourceId);
+    source.properties.set("targetId", fk);
+    $table(ctx, source as unknown as Model, "Source", "test");
+    $pk(ctx, sourceId as unknown as ModelProperty);
+    $references(
+      ctx,
+      fk as unknown as ModelProperty,
+      targetId as unknown as ModelProperty,
+      "RESTRICT",
+    );
+
+    const { tables } = buildIR(program);
+    const fkField = tables
+      .find((t) => t.name === "Source")
+      ?.fields.find((f) => f.name === "targetId");
+    assert.equal(fkField?.references?.onDelete, "restrict");
+  });
+
+  it("skips non-Model entries in table state", () => {
+    const program = createMockProgram();
+    const ctx = mockContext(program);
+    const model: MockModel = { kind: "Model", name: "Row", properties: new Map() };
+    const rowId: MockProp = {
+      kind: "ModelProperty",
+      name: "rowId",
+      type: mockScalar("string"),
+      optional: false,
+      model,
+    };
+    model.properties.set("rowId", rowId);
+    $table(ctx, model as unknown as Model, "Row", "test");
+    $pk(ctx, rowId as unknown as ModelProperty);
+    // A stray non-Model target in the same state map must be ignored.
+    program.stateMap(StateKeys.table).set({ kind: "Interface" }, { name: "X", service: "s" });
+
+    const { tables } = buildIR(program);
+    assert.equal(tables.length, 1);
+    assert.equal(tables[0].name, "Row");
+  });
+
+  it("carries a @check expression into field constraints", () => {
+    const program = createMockProgram();
+    const ctx = mockContext(program);
+    const model: MockModel = { kind: "Model", name: "Row", properties: new Map() };
+    const rowId: MockProp = {
+      kind: "ModelProperty",
+      name: "rowId",
+      type: mockScalar("string"),
+      optional: false,
+      model,
+    };
+    const email: MockProp = {
+      kind: "ModelProperty",
+      name: "email",
+      type: mockScalar("string"),
+      optional: false,
+      model,
+    };
+    model.properties.set("rowId", rowId);
+    model.properties.set("email", email);
+    $table(ctx, model as unknown as Model, "Row", "test");
+    $pk(ctx, rowId as unknown as ModelProperty);
+    $check(ctx, email as unknown as ModelProperty, "email LIKE '%@%'");
+
+    const { tables } = buildIR(program);
+    const field = tables[0].fields.find((f) => f.name === "email");
+    assert.equal(field?.constraints?.check, "email LIKE '%@%'");
+  });
+
+  it("extracts a literal default value from a property", () => {
+    const program = createMockProgram();
+    const ctx = mockContext(program);
+    const model: MockModel = { kind: "Model", name: "Row", properties: new Map() };
+    const rowId: MockProp = {
+      kind: "ModelProperty",
+      name: "rowId",
+      type: mockScalar("string"),
+      optional: false,
+      model,
+    };
+    const status = {
+      kind: "ModelProperty" as const,
+      name: "status",
+      type: mockScalar("string"),
+      optional: false,
+      model,
+      default: { value: "active" },
+    };
+    model.properties.set("rowId", rowId);
+    model.properties.set("status", status as unknown as MockProp);
+    $table(ctx, model as unknown as Model, "Row", "test");
+    $pk(ctx, rowId as unknown as ModelProperty);
+
+    const { tables } = buildIR(program);
+    const field = tables[0].fields.find((f) => f.name === "status");
+    assert.equal(field?.defaultValue, "active");
+  });
+
+  it("extracts a raw primitive default value", () => {
+    const program = createMockProgram();
+    const ctx = mockContext(program);
+    const model: MockModel = { kind: "Model", name: "Row", properties: new Map() };
+    const rowId: MockProp = {
+      kind: "ModelProperty",
+      name: "rowId",
+      type: mockScalar("string"),
+      optional: false,
+      model,
+    };
+    const count = {
+      kind: "ModelProperty" as const,
+      name: "count",
+      type: mockScalar("int32"),
+      optional: false,
+      model,
+      default: 7,
+    };
+    model.properties.set("rowId", rowId);
+    model.properties.set("count", count as unknown as MockProp);
+    $table(ctx, model as unknown as Model, "Row", "test");
+    $pk(ctx, rowId as unknown as ModelProperty);
+
+    const { tables } = buildIR(program);
+    assert.equal(tables[0].fields.find((f) => f.name === "count")?.defaultValue, 7);
+  });
+
+  it("ignores an unrecognized default value shape", () => {
+    const program = createMockProgram();
+    const ctx = mockContext(program);
+    const model: MockModel = { kind: "Model", name: "Row", properties: new Map() };
+    const rowId: MockProp = {
+      kind: "ModelProperty",
+      name: "rowId",
+      type: mockScalar("string"),
+      optional: false,
+      model,
+    };
+    const weird = {
+      kind: "ModelProperty" as const,
+      name: "weird",
+      type: mockScalar("string"),
+      optional: false,
+      model,
+      default: { kind: "SomethingElse" },
+    };
+    model.properties.set("rowId", rowId);
+    model.properties.set("weird", weird as unknown as MockProp);
+    $table(ctx, model as unknown as Model, "Row", "test");
+    $pk(ctx, rowId as unknown as ModelProperty);
+
+    const { tables } = buildIR(program);
+    assert.equal(tables[0].fields.find((f) => f.name === "weird")?.defaultValue, undefined);
+  });
+
+  it("extracts an enum-member default value", () => {
+    const program = createMockProgram();
+    const ctx = mockContext(program);
+    const model: MockModel = { kind: "Model", name: "Row", properties: new Map() };
+    const rowId: MockProp = {
+      kind: "ModelProperty",
+      name: "rowId",
+      type: mockScalar("string"),
+      optional: false,
+      model,
+    };
+    const state = {
+      kind: "ModelProperty" as const,
+      name: "state",
+      type: mockScalar("string"),
+      optional: false,
+      model,
+      default: { kind: "EnumMember", name: "Open", value: "open" },
+    };
+    model.properties.set("rowId", rowId);
+    model.properties.set("state", state as unknown as MockProp);
+    $table(ctx, model as unknown as Model, "Row", "test");
+    $pk(ctx, rowId as unknown as ModelProperty);
+
+    const { tables } = buildIR(program);
+    const field = tables[0].fields.find((f) => f.name === "state");
+    assert.equal(field?.defaultValue, "open");
+  });
+
+  it("builds a composite foreign key from @foreignKeyDef", () => {
+    const program = createMockProgram();
+    const ctx = mockContext(program);
+
+    const target: MockModel = { kind: "Model", name: "Target", properties: new Map() };
+    const tA: MockProp = {
+      kind: "ModelProperty",
+      name: "a",
+      type: mockScalar("string"),
+      optional: false,
+      model: target,
+    };
+    const tB: MockProp = {
+      kind: "ModelProperty",
+      name: "b",
+      type: mockScalar("string"),
+      optional: false,
+      model: target,
+    };
+    target.properties.set("a", tA);
+    target.properties.set("b", tB);
+    $table(ctx, target as unknown as Model, "Target", "test");
+
+    const source: MockModel = { kind: "Model", name: "Source", properties: new Map() };
+    const sA: MockProp = {
+      kind: "ModelProperty",
+      name: "a",
+      type: mockScalar("string"),
+      optional: false,
+      model: source,
+    };
+    const sB: MockProp = {
+      kind: "ModelProperty",
+      name: "b",
+      type: mockScalar("string"),
+      optional: false,
+      model: source,
+    };
+    source.properties.set("a", sA);
+    source.properties.set("b", sB);
+    $table(ctx, source as unknown as Model, "Source", "test");
+    $foreignKeyDef(
+      ctx,
+      source as unknown as Model,
+      "source_target_fk",
+      [sA, sB] as unknown as ModelProperty[],
+      [tA, tB] as unknown as ModelProperty[],
+    );
+
+    const { tables } = buildIR(program);
+    const sourceTable = tables.find((t) => t.name === "Source");
+    assert.equal(sourceTable?.foreignKeys.length, 1);
+    assert.deepEqual(sourceTable?.foreignKeys[0], {
+      name: "source_target_fk",
+      columns: ["a", "b"],
+      foreignTable: "Target",
+      foreignColumns: ["a", "b"],
+    });
+  });
+
+  it("accepts decorator columns supplied as a marshalled tuple value", () => {
+    const program = createMockProgram();
+    const ctx = mockContext(program);
+    const model: MockModel = { kind: "Model", name: "Row", properties: new Map() };
+    const a: MockProp = {
+      kind: "ModelProperty",
+      name: "a",
+      type: mockScalar("string"),
+      optional: false,
+      model,
+    };
+    const b: MockProp = {
+      kind: "ModelProperty",
+      name: "b",
+      type: mockScalar("string"),
+      optional: false,
+      model,
+    };
+    model.properties.set("a", a);
+    model.properties.set("b", b);
+    $table(ctx, model as unknown as Model, "Row", "test");
+    // Emulate the compiled-TypeSpec marshalling: a { values } tuple wrapper.
+    program
+      .stateMap(StateKeys.indexDef)
+      .set(model, [{ name: "row_ab_idx", columns: { values: [a, b] }, unique: false }]);
+
+    const { tables } = buildIR(program);
+    assert.deepEqual(tables[0].indexes[0].columns, ["a", "b"]);
+  });
+
+  it("resolves int64, float32, float64, and boolean scalars", () => {
+    const program = createMockProgram();
+    const ctx = mockContext(program);
+    const model: MockModel = { kind: "Model", name: "Row", properties: new Map() };
+    const rowId: MockProp = {
+      kind: "ModelProperty",
+      name: "rowId",
+      type: mockScalar("string"),
+      optional: false,
+      model,
+    };
+    model.properties.set("rowId", rowId);
+    for (const [name, scalar] of [
+      ["big", "int64"],
+      ["ratio", "float32"],
+      ["precise", "float64"],
+      ["flag", "boolean"],
+    ] as const) {
+      model.properties.set(name, {
+        kind: "ModelProperty",
+        name,
+        type: mockScalar(scalar),
+        optional: false,
+        model,
+      });
+    }
+    $table(ctx, model as unknown as Model, "Row", "test");
+    $pk(ctx, rowId as unknown as ModelProperty);
+
+    const { tables } = buildIR(program);
+    const byName = new Map(tables[0].fields.map((f) => [f.name, f.type.kind]));
+    assert.equal(byName.get("big"), "bigint");
+    assert.equal(byName.get("ratio"), "real");
+    assert.equal(byName.get("precise"), "doublePrecision");
+    assert.equal(byName.get("flag"), "boolean");
+  });
+
+  it("recurses into a base scalar and falls back to text for an unknown scalar", () => {
+    const program = createMockProgram();
+    const ctx = mockContext(program);
+    const model: MockModel = { kind: "Model", name: "Row", properties: new Map() };
+    const rowId: MockProp = {
+      kind: "ModelProperty",
+      name: "rowId",
+      type: mockScalar("string"),
+      optional: false,
+      model,
+    };
+    // A custom scalar whose base is `int32` resolves through the recursion.
+    const customInt = { kind: "Scalar", name: "Rating", baseScalar: mockScalar("int32") };
+    // A custom scalar with no known base and no maxLength falls back to text.
+    const opaque = { kind: "Scalar", name: "Opaque" };
+    model.properties.set("rowId", rowId);
+    model.properties.set("rating", {
+      kind: "ModelProperty",
+      name: "rating",
+      type: customInt as unknown as ReturnType<typeof mockScalar>,
+      optional: false,
+      model,
+    });
+    model.properties.set("blob", {
+      kind: "ModelProperty",
+      name: "blob",
+      type: opaque as unknown as ReturnType<typeof mockScalar>,
+      optional: false,
+      model,
+    });
+    $table(ctx, model as unknown as Model, "Row", "test");
+    $pk(ctx, rowId as unknown as ModelProperty);
+
+    const { tables } = buildIR(program);
+    const byName = new Map(tables[0].fields.map((f) => [f.name, f.type.kind]));
+    assert.equal(byName.get("rating"), "integer");
+    assert.equal(byName.get("blob"), "text");
+  });
+});
+
+describe("toModelProperties input validation", () => {
+  it("throws when decorator columns are neither an array nor a tuple value", () => {
+    const program = createMockProgram();
+    const ctx = mockContext(program);
+    const model: MockModel = { kind: "Model", name: "Row", properties: new Map() };
+    const rowId: MockProp = {
+      kind: "ModelProperty",
+      name: "rowId",
+      type: mockScalar("string"),
+      optional: false,
+      model,
+    };
+    model.properties.set("rowId", rowId);
+    $table(ctx, model as unknown as Model, "Row", "test");
+    program
+      .stateMap(StateKeys.indexDef)
+      .set(model, [{ name: "bad_idx", columns: 42, unique: false }]);
+
+    assert.throws(() => buildIR(program), /Expected a ModelProperty\[\] or tuple value/);
   });
 });

@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 import { bookstoreTables } from "../fixtures/bookstore-ir.ts";
 import type { ManyRelation, ManyThroughRelation, OneRelation } from "./relation-graph.ts";
 import { buildRelationGraph, deriveOneRelationName } from "./relation-graph.ts";
+import type { TableDef } from "./types.ts";
 
 describe("deriveOneRelationName", () => {
   it('strips "Id" suffix: authorId → author', () => {
@@ -15,6 +16,67 @@ describe("deriveOneRelationName", () => {
 
   it("returns field name unchanged if no Id suffix", () => {
     assert.equal(deriveOneRelationName("name"), "name");
+  });
+});
+
+describe("buildRelationGraph edge cases", () => {
+  function table(over: Partial<TableDef> & { name: string }): TableDef {
+    return {
+      service: "test",
+      tableName: over.name.toLowerCase(),
+      primaryKey: { tableName: over.name.toLowerCase(), columns: ["id"], isComposite: false },
+      fields: [],
+      foreignKeys: [],
+      isJunction: false,
+      indexes: [],
+      uniqueConstraints: [],
+      ...over,
+    };
+  }
+
+  it("skips a junction that does not have exactly two references", () => {
+    const parent = table({ name: "Parent" });
+    // A junction carrying three FK-bearing fields is not a two-sided join and is skipped.
+    const triple = table({
+      name: "Triple",
+      isJunction: true,
+      fields: [
+        {
+          name: "aId",
+          columnName: "a_id",
+          type: { kind: "text" },
+          nullable: false,
+          createdAt: false,
+          updatedAt: false,
+          references: { tableName: "Parent", fieldName: "id" },
+        },
+        {
+          name: "bId",
+          columnName: "b_id",
+          type: { kind: "text" },
+          nullable: false,
+          createdAt: false,
+          updatedAt: false,
+          references: { tableName: "Parent", fieldName: "id" },
+        },
+        {
+          name: "cId",
+          columnName: "c_id",
+          type: { kind: "text" },
+          nullable: false,
+          createdAt: false,
+          updatedAt: false,
+          references: { tableName: "Parent", fieldName: "id" },
+        },
+      ],
+    });
+
+    const graph = buildRelationGraph([parent, triple]);
+    const tripleRels = graph.get("Triple");
+    assert.ok(tripleRels);
+    // Three "one" relations, but no many-through (junction rule needs exactly two).
+    assert.ok(tripleRels.every((r) => r.kind === "one"));
+    assert.equal(tripleRels.length, 3);
   });
 });
 

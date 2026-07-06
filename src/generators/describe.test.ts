@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { bookstoreTables } from "../fixtures/bookstore-ir.ts";
 import { buildRelationGraph } from "../ir/relation-graph.ts";
+import type { TableDef } from "../ir/types.ts";
 import { generateDescribe } from "./describe-generator.ts";
 
 const graph = buildRelationGraph(bookstoreTables);
@@ -239,5 +240,78 @@ describe("describe generator", () => {
     const openParens = (output.match(/\(/g) || []).length;
     const closeParens = (output.match(/\)/g) || []).length;
     assert.equal(openParens, closeParens, "Unbalanced parentheses");
+  });
+});
+
+describe("describe generator: tables without relations", () => {
+  const standalone: TableDef = {
+    name: "Setting",
+    service: "test",
+    tableName: "settings",
+    primaryKey: { tableName: "settings", columns: ["settingId"], isComposite: false },
+    fields: [
+      {
+        name: "settingId",
+        columnName: "setting_id",
+        type: { kind: "text" },
+        nullable: false,
+        createdAt: false,
+        updatedAt: false,
+      },
+    ],
+    foreignKeys: [],
+    isJunction: false,
+    indexes: [],
+    uniqueConstraints: [],
+  };
+
+  const composite: TableDef = {
+    name: "MailboxLock",
+    service: "test",
+    tableName: "mailbox_lock",
+    primaryKey: {
+      tableName: "mailbox_lock",
+      columns: ["mailboxId", "eventName"],
+      isComposite: true,
+    },
+    fields: [
+      {
+        name: "mailboxId",
+        columnName: "mailbox_id",
+        type: { kind: "text" },
+        nullable: false,
+        createdAt: false,
+        updatedAt: false,
+      },
+      {
+        name: "eventName",
+        columnName: "event_name",
+        type: { kind: "text" },
+        nullable: false,
+        createdAt: false,
+        updatedAt: false,
+      },
+    ],
+    foreignKeys: [],
+    isJunction: false,
+    indexes: [],
+    uniqueConstraints: [],
+  };
+
+  const graph = buildRelationGraph([standalone, composite]);
+  const out = generateDescribe([standalone, composite], graph);
+
+  it("emits a findFirst with no `with` clause when a table has no relations", () => {
+    assert.ok(out.includes("export const describeSetting = ("));
+    assert.ok(out.includes("  db.query.settings.findFirst({"));
+    assert.ok(out.includes("    where: { settingId },"));
+    assert.ok(!out.includes("with:"));
+  });
+
+  it("uses every composite primary-key column in the where clause and signature", () => {
+    assert.ok(out.includes("export const describeMailboxLock = ("));
+    assert.ok(out.includes("  mailboxId: string,"));
+    assert.ok(out.includes("  eventName: string,"));
+    assert.ok(out.includes("    where: { mailboxId, eventName },"));
   });
 });

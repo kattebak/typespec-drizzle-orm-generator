@@ -78,6 +78,11 @@ describe("stringifyObject", () => {
     assert.ok(result.includes("() => Date.now()"));
   });
 
+  it("serializes a plain function value via toString", () => {
+    const result = stringifyObject({ fn: () => 1 });
+    assert.ok(result.includes("() =>"));
+  });
+
   it("injects RawCode with generic type", () => {
     const result = stringifyObject({
       type: new RawCode('CustomAttributeType<string>("any")'),

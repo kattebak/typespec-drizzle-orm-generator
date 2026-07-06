@@ -8,6 +8,52 @@ import { generateSchema } from "./schema-generator.ts";
 const pg = resolveDialect("pg");
 const sqlite = resolveDialect("sqlite");
 
+describe("schema generator: remit-style columns", () => {
+  const remitTable: TableDef = {
+    name: "Message",
+    service: "remit",
+    tableName: "message",
+    primaryKey: { tableName: "message", columns: ["messageId"], isComposite: false },
+    fields: [
+      {
+        name: "messageId",
+        columnName: "message_id",
+        type: { kind: "text" },
+        nullable: false,
+        autoGenerateId: true,
+        createdAt: false,
+        updatedAt: false,
+      },
+      {
+        name: "star",
+        columnName: "star",
+        type: { kind: "textEnum", values: ["none", "red"] },
+        nullable: false,
+        createdAt: false,
+        updatedAt: false,
+      },
+    ],
+    foreignKeys: [],
+    isJunction: false,
+    indexes: [],
+    uniqueConstraints: [],
+  };
+
+  it("renders a text-narrowed enum column and a generated id default (pg)", () => {
+    const output = generateSchema([remitTable], [], pg);
+    assert.ok(output.includes('star: text("star").$type<"none" | "red">()'));
+    assert.ok(output.includes("$defaultFn(() => generateBase36Id())"));
+    assert.ok(output.includes("generateBase36Id"));
+  });
+
+  it("renders a text-narrowed enum column and a generated id default (sqlite)", () => {
+    const output = generateSchema([remitTable], [], sqlite);
+    assert.ok(output.includes('star: text("star").$type<"none" | "red">()'));
+    assert.ok(output.includes("$defaultFn(() => generateBase36Id())"));
+    assert.ok(output.includes('from "drizzle-orm/sqlite-core"'));
+  });
+});
+
 describe("schema generator", () => {
   it("generates correct imports", () => {
     const output = generateSchema(bookstoreTables, bookstoreEnums, pg);
