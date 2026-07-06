@@ -74,6 +74,14 @@ model BodyPart {
   messageId: string;
   content: string;
 }
+
+@entity("mailboxLock", "remit")
+@index("MailboxLock", { pk: [MailboxLock.mailboxId], sk: [MailboxLock.eventName] })
+model MailboxLock {
+  mailboxId: string;
+  eventName: string;
+  lockId: string;
+}
 `;
 
 describe("remit entity front-end (buildRemitIR)", () => {
@@ -102,9 +110,20 @@ describe("remit entity front-end (buildRemitIR)", () => {
     assert.equal(byName.get("ThreadMessage")?.tableName, "thread_message");
   });
 
-  it("builds a composite primary key from the primary index pk+sk", () => {
+  it("uses the single-column identity field as the primary key", () => {
     const pk = byName.get("ThreadMessage")?.primaryKey;
-    assert.deepEqual(pk?.columns, ["accountConfigId", "threadMessageId"]);
+    assert.deepEqual(pk?.columns, ["threadMessageId"]);
+    assert.equal(pk?.isComposite, false);
+  });
+
+  it("demotes the electrodb primary composite to a secondary index", () => {
+    const names = byName.get("ThreadMessage")?.indexes.map((i) => i.name);
+    assert.ok(names?.includes("thread_message_primary"));
+  });
+
+  it("keeps a composite primary key for an entity with no identity field", () => {
+    const pk = byName.get("MailboxLock")?.primaryKey;
+    assert.deepEqual(pk?.columns, ["mailboxId", "eventName"]);
     assert.equal(pk?.isComposite, true);
   });
 
@@ -113,18 +132,21 @@ describe("remit entity front-end (buildRemitIR)", () => {
     assert.ok(names?.includes("thread_message_by_date"));
   });
 
-  it("resolves a string-valued enum property to an enum column", () => {
+  it("resolves enums to text-backed union columns and emits no pgEnum defs", () => {
     const star = byName.get("ThreadMessage")?.fields.find((f) => f.name === "star");
-    assert.equal(star?.type.kind, "enum");
+    assert.equal(star?.type.kind, "textEnum");
+    assert.equal(
+      tables.every((t) => t.fields.every((f) => f.type.kind !== "enum")),
+      true,
+    );
   });
 
-  it("resolves enums to text-backed union columns and emits no enum defs under enum-mode text", () => {
-    const result = buildRemitIR(program, { enumAsText: true });
-    const star = result.tables
+  it("attaches a generated id default to single-column text PKs when idDefault is set", () => {
+    const result = buildRemitIR(program, { idDefault: true });
+    const pkField = result.tables
       .find((t) => t.name === "ThreadMessage")
-      ?.fields.find((f) => f.name === "star");
-    assert.equal(star?.type.kind, "textEnum");
-    assert.equal(result.enums.length, 0);
+      ?.fields.find((f) => f.name === "threadMessageId");
+    assert.equal(pkField?.autoGenerateId, true);
   });
 
   it("resolves a string-valued union to a text column", () => {

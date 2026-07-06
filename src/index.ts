@@ -51,7 +51,6 @@ export interface EmitterOptions {
    *   (e.g. matching a DynamoDB single-table port) and you want no `ALTER TYPE`
    *   migrations. Currently honoured by the `remit` front-end.
    */
-  "enum-mode"?: "native" | "text";
   /**
    * Emit foreign-key `references()` clauses. Defaults to true. Set false when the
    * consumer manages referential integrity and delete cascades itself (so a
@@ -59,16 +58,22 @@ export interface EmitterOptions {
    * front-end this drops the collection-derived foreign keys.
    */
   "foreign-keys"?: boolean;
+  /**
+   * Attach `.$defaultFn(() => generateBase36Id())` to single-column text primary
+   * keys so a caller may omit the id. Defaults to false. Honoured by the remit
+   * front-end. Enable when the store generates its own base36 ids.
+   */
+  "id-default"?: boolean;
 }
 
 export async function $onEmit(context: EmitContext<EmitterOptions>): Promise<void> {
   if (context.program.compilerOptions.noEmit) return;
 
-  const enumAsText = context.options["enum-mode"] === "text";
   const foreignKeys = context.options["foreign-keys"] ?? true;
+  const idDefault = context.options["id-default"] ?? false;
   const { tables, enums } =
     context.options.frontend === "remit"
-      ? buildRemitIR(context.program, { enumAsText, foreignKeys })
+      ? buildRemitIR(context.program, { foreignKeys, idDefault })
       : buildIR(context.program);
 
   const config = {

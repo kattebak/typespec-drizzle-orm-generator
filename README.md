@@ -317,23 +317,29 @@ Set `frontend` in your `tspconfig.yaml` to choose which TypeSpec vocabulary the 
 | `drizzle` | This library's own `@table` / `@pk` / `@references` decorators.       |
 | `remit`   | The ElectroDB vocabulary (`@entity` / `@index`) from `typespec-electrodb-emitter`. |
 
-The `remit` front-end maps an ElectroDB model to a table: the primary `@index` becomes the primary key (composite when it has both `pk` and `sk`), each secondary `@index` becomes a named index, and a `collection` shared by two or more entities becomes an `ON DELETE CASCADE` foreign key from each member to the entity that owns the shared partition key.
+The `remit` front-end maps an ElectroDB model to a table:
+
+- **Primary key** is the entity's own identity field, `<entity>Id`, as a single column. The ElectroDB primary index is a DynamoDB access pattern, not the entity's identity, so it becomes an ordinary secondary index. An entity with no `<entity>Id` field keeps the ElectroDB primary composite as its key.
+- Every `@index` becomes a named secondary index.
+- **Enums** are text columns narrowed by a `$type` union, not pgEnums — a store that mirrors a DynamoDB port keeps enum values as strings and avoids an `ALTER TYPE` per new value.
+- A `collection` shared by two or more entities becomes an `ON DELETE CASCADE` foreign key from each member to the entity that owns the shared partition key (unless `foreign-keys: false`).
 
 ```yaml
 options:
   "@kattebak/typespec-drizzle-orm-generator":
     frontend: "remit"
+    schema-only: true
+    foreign-keys: false
+    id-default: true
 ```
 
 ## Schema-only output
 
 `relations.ts`, `describe.ts`, and the `DrizzleClient` type use the Drizzle v2 relational API (`defineRelations`, `PgAsyncDatabase`). Set `schema-only: true` to emit just the table schema (`schema.ts` + the `base36Uuid` / nullable custom types), which stays compatible with Drizzle v1 consumers that manage relations themselves. The generated `package.json` then declares a `drizzle-orm` peer range of `>=0.30.0`.
 
-```yaml
-options:
-  "@kattebak/typespec-drizzle-orm-generator":
-    schema-only: true
-```
+## Foreign keys and id defaults
+
+`foreign-keys: false` drops the collection-derived foreign keys for a consumer that manages referential integrity and delete cascades in the application (a database `ON DELETE CASCADE` would otherwise fight an app-managed cascade). `id-default: true` attaches `.$defaultFn(() => generateBase36Id())` to single-column text primary keys so a caller may omit the id. Both are honoured by the `remit` front-end.
 
 ## Type mapping (PostgreSQL)
 

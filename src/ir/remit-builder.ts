@@ -1,6 +1,5 @@
 import type {
   DecoratorApplication,
-  Enum,
   Model,
   ModelProperty,
   Program,
@@ -52,8 +51,8 @@ interface CollectionMember {
 }
 
 export interface RemitBuildOptions {
-  enumAsText?: boolean;
   foreignKeys?: boolean;
+  idDefault?: boolean;
 }
 
 export function buildRemitIR(
@@ -63,11 +62,10 @@ export function buildRemitIR(
   tables: TableDef[];
   enums: EnumDef[];
 } {
-  const enumAsText = options.enumAsText ?? false;
   const foreignKeys = options.foreignKeys ?? true;
+  const idDefault = options.idDefault ?? false;
   const tables: TableDef[] = [];
   const enums: EnumDef[] = [];
-  const seenEnums = new Set<string>();
 
   const models: Model[] = [];
   navigateProgram(program, {
@@ -88,17 +86,20 @@ export function buildRemitIR(
 
     const patterns = decoratorsByName(model, "@index").map(readIndexDecorator);
     const primary = patterns.find((p) => !p.index);
-    const pkColumns = primary ? [...primary.pk, ...primary.sk] : [];
+    const primaryColumns = primary ? [...primary.pk, ...primary.sk] : [];
+
+    // The primary key is the entity's own identity field (`<entity>Id`) as a
+    // single column when it exists. The ElectroDB primary index is a DynamoDB
+    // access pattern (a pk/sk composite), not the entity's identity — it becomes
+    // an ordinary secondary index. Entities with no `<entity>Id` field (a lock
+    // keyed by mailbox + event) keep the composite primary as their key.
+    const idField = `${entityName}Id`;
+    const pkColumns = model.properties.has(idField) ? [idField] : primaryColumns;
     const singlePkColumn = pkColumns.length === 1 ? pkColumns[0] : undefined;
 
     const fields: FieldDef[] = [];
     for (const [propName, prop] of model.properties) {
-      const resolved = resolveFieldType(prop, enumAsText);
-      if (resolved.enumDef && !seenEnums.has(resolved.enumDef.name)) {
-        seenEnums.add(resolved.enumDef.name);
-        enums.push(resolved.enumDef);
-      }
-
+      const resolved = resolveFieldType(prop);
       const columnName = readLabel(prop) ?? toSnakeCase(propName);
       const field: FieldDef = {
         name: propName,
@@ -109,7 +110,7 @@ export function buildRemitIR(
         updatedAt: false,
       };
 
-      if (propName === singlePkColumn && resolved.type.kind === "text") {
+      if (idDefault && propName === singlePkColumn && resolved.type.kind === "text") {
         field.autoGenerateId = true;
       }
 
@@ -119,13 +120,17 @@ export function buildRemitIR(
       fields.push(field);
     }
 
+    const sameColumns = (cols: string[]): boolean =>
+      cols.length === pkColumns.length && cols.every((c, i) => c === pkColumns[i]);
+
     const indexes: IndexDef[] = patterns
-      .filter((p) => p.index && p.pk.length + p.sk.length > 0)
+      .filter((p) => p.pk.length + p.sk.length > 0)
       .map((p) => ({
-        name: `${sqlTableName}_${toSnakeCase(p.name)}`,
+        name: p.index ? `${sqlTableName}_${toSnakeCase(p.name)}` : `${sqlTableName}_primary`,
         columns: [...p.pk, ...p.sk],
         unique: false,
-      }));
+      }))
+      .filter((idx) => !sameColumns(idx.columns));
 
     for (const pattern of patterns) {
       if (!pattern.collection) continue;
@@ -263,15 +268,16 @@ function tupleNames(tuple: Tuple): string[] {
 
 interface ResolvedField {
   type: FieldType;
-  enumDef?: EnumDef;
 }
 
-function resolveFieldType(prop: ModelProperty, enumAsText: boolean): ResolvedField {
+function resolveFieldType(prop: ModelProperty): ResolvedField {
   const type = prop.type;
 
   if (type.kind === "Scalar") return { type: resolveScalarType(type) };
+  // Remit stores enums as strings (parity with the DynamoDB single-table port),
+  // so an enum becomes a text column narrowed by a `$type` union rather than a
+  // pgEnum — pgEnum would need an `ALTER TYPE` for every new value.
   if (type.kind === "Enum") {
-    if (!enumAsText) return resolveEnumType(type);
     const values = [...type.members.values()].map((m) =>
       m.value !== undefined ? String(m.value) : m.name,
     );
@@ -334,18 +340,6 @@ function resolveScalarType(scalar: Scalar): FieldType {
   if (scalar.baseScalar) return resolveScalarType(scalar.baseScalar);
 
   return { kind: "text" };
-}
-
-function resolveEnumType(enumType: Enum): ResolvedField {
-  const values = [...enumType.members.values()].map((m) =>
-    m.value !== undefined ? String(m.value) : m.name,
-  );
-  const base = lowerFirst(enumType.name);
-  const enumName = `${base}Enum`;
-  return {
-    type: { kind: "enum", enumName, values },
-    enumDef: { name: enumName, sqlName: toSnakeCase(base), values },
-  };
 }
 
 function extractDefaultValue(prop: ModelProperty): unknown {
