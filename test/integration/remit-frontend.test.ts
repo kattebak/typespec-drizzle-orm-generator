@@ -29,6 +29,16 @@ enum Color {
   Red: "red",
 }
 
+enum SystemFlag {
+  Seen: "\\\\Seen",
+  Answered: "\\\\Answered",
+}
+
+union FlagValue {
+  system: SystemFlag,
+  custom: string,
+}
+
 model Meta {
   score: int32;
 }
@@ -41,6 +51,7 @@ model ThreadMessage {
   threadMessageId: string;
   sentDate: int64;
   star: Color;
+  flag: FlagValue;
   meta?: Meta;
   subject?: string;
   @createdAt createdAt: int64;
@@ -103,6 +114,11 @@ describe("remit entity front-end (buildRemitIR)", () => {
   it("resolves a string-valued enum property to an enum column", () => {
     const star = byName.get("ThreadMessage")?.fields.find((f) => f.name === "star");
     assert.equal(star?.type.kind, "enum");
+  });
+
+  it("resolves a string-valued union to a text column", () => {
+    const flag = byName.get("ThreadMessage")?.fields.find((f) => f.name === "flag");
+    assert.equal(flag?.type.kind, "text");
   });
 
   it("resolves a nested model property to jsonb and marks it nullable", () => {

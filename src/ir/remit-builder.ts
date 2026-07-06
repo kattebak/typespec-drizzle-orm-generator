@@ -6,6 +6,8 @@ import type {
   Program,
   Scalar,
   Tuple,
+  Type,
+  Union,
 } from "@typespec/compiler";
 import { navigateProgram } from "@typespec/compiler";
 import { toSnakeCase } from "../generators/naming.js";
@@ -255,9 +257,39 @@ function resolveFieldType(prop: ModelProperty): ResolvedField {
   if (type.kind === "Scalar") return { type: resolveScalarType(type) };
   if (type.kind === "Enum") return resolveEnumType(type);
   if (type.kind === "Model") return { type: { kind: "jsonb" } };
-  if (type.kind === "Union") return { type: { kind: "jsonb" } };
+  if (type.kind === "Union") {
+    return isStringUnion(type) ? { type: { kind: "text" } } : { type: { kind: "jsonb" } };
+  }
 
   return { type: { kind: "text" } };
+}
+
+/**
+ * A union whose every variant is a string (a string scalar, a string-valued enum,
+ * or a string literal) is a constrained string, not a structured value — it maps to
+ * a text column. `MessageFlagValue` (system flag | keyword flag | free string) is the
+ * canonical case. A union with any non-string variant is stored as jsonb.
+ */
+function isStringUnion(union: Union): boolean {
+  const variants = [...union.variants.values()];
+  if (variants.length === 0) return false;
+  return variants.every((variant) => isStringLike(variant.type));
+}
+
+function isStringLike(type: Type): boolean {
+  if (type.kind === "String") return true;
+  if (type.kind === "Scalar") return scalarIsString(type);
+  if (type.kind === "Enum") {
+    return [...type.members.values()].every(
+      (m) => m.value === undefined || typeof m.value === "string",
+    );
+  }
+  return false;
+}
+
+function scalarIsString(scalar: Scalar): boolean {
+  if (scalar.name === "string") return true;
+  return scalar.baseScalar ? scalarIsString(scalar.baseScalar) : false;
 }
 
 function resolveScalarType(scalar: Scalar): FieldType {

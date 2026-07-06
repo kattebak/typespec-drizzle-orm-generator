@@ -36,6 +36,14 @@ export interface EmitterOptions {
    * - "remit": the ElectroDB vocabulary (`@entity`/`@index`) via `buildRemitIR`.
    */
   frontend?: "drizzle" | "remit";
+  /**
+   * When true, emit only the table schema (`schema.ts` + `types.ts`) and omit
+   * `relations.ts` / `describe.ts`. The relations and describe helpers use the
+   * Drizzle v2 relational API (`defineRelations`, `PgAsyncDatabase`); schema-only
+   * output stays compatible with Drizzle v1 consumers that manage relations
+   * themselves. Defaults to false.
+   */
+  "schema-only"?: boolean;
 }
 
 export async function $onEmit(context: EmitContext<EmitterOptions>): Promise<void> {
@@ -49,6 +57,7 @@ export async function $onEmit(context: EmitContext<EmitterOptions>): Promise<voi
     packageVersion: context.options["package-version"] ?? "0.0.1",
     dialect: context.options.dialect ?? "pg",
     pluralize: context.options.pluralize ?? true,
+    schemaOnly: context.options["schema-only"] ?? false,
   };
 
   const files = assemblePackage(tables, enums, config);
