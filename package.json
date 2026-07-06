@@ -30,7 +30,12 @@
   },
   "peerDependencies": {
     "@typespec/compiler": ">=1.0.0",
-    "drizzle-orm": ">=1.0.0-beta.1"
+    "drizzle-orm": ">=0.30.0"
+  },
+  "peerDependenciesMeta": {
+    "drizzle-orm": {
+      "optional": true
+    }
   },
   "scripts": {
     "build": "tsgo --project tsconfig.build.json",
