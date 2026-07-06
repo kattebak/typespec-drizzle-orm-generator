@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+import { bookstoreTables } from "../fixtures/bookstore-ir.ts";
 import type { ManyRelation, ManyThroughRelation, OneRelation } from "./relation-graph.ts";
 import { buildRelationGraph, deriveOneRelationName } from "./relation-graph.ts";
-import { bookstoreTables } from "../fixtures/bookstore-ir.ts";
 
 describe("deriveOneRelationName", () => {
   it('strips "Id" suffix: authorId → author', () => {

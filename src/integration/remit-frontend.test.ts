@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import { before, describe, it } from "node:test";
 import { createTestHost } from "@typespec/compiler/testing";
-import { buildRemitIR } from "../../src/ir/remit-builder.ts";
-import type { TableDef } from "../../src/ir/types.ts";
+import { buildRemitIR } from "../ir/remit-builder.ts";
+import type { TableDef } from "../ir/types.ts";
 
 const STUB_DECORATORS = `
 using TypeSpec.Reflection;

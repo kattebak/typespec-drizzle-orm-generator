@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+import { bookstoreEnums, bookstoreTables } from "../fixtures/bookstore-ir.ts";
+import type { EnumDef, TableDef } from "../ir/types.ts";
 import { resolveDialect } from "./dialect.ts";
 import { generateSchema } from "./schema-generator.ts";
-import type { EnumDef, TableDef } from "../ir/types.ts";
-import { bookstoreEnums, bookstoreTables } from "../fixtures/bookstore-ir.ts";
 
 const pg = resolveDialect("pg");
 const sqlite = resolveDialect("sqlite");
