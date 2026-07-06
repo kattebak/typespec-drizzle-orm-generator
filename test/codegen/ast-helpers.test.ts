@@ -17,6 +17,14 @@ describe("quoted", () => {
   it("wraps a string in double quotes", () => {
     assert.equal(quoted("hello"), '"hello"');
   });
+
+  it("escapes a leading backslash (IMAP system attribute)", () => {
+    assert.equal(quoted("\\NonExistent"), '"\\\\NonExistent"');
+  });
+
+  it("escapes embedded double quotes", () => {
+    assert.equal(quoted('a"b'), '"a\\"b"');
+  });
 });
 
 describe("fnCall", () => {

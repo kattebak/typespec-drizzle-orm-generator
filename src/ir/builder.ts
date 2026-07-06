@@ -1,4 +1,5 @@
-import type { Model, ModelProperty, Scalar } from "@typespec/compiler";
+import type { Model, ModelProperty, Program, Scalar } from "@typespec/compiler";
+import { getMaxLength } from "@typespec/compiler";
 import { toSnakeCase } from "../generators/naming.js";
 import { StateKeys } from "../lib.js";
 import type {
@@ -113,7 +114,10 @@ export function buildIR(program: ProgramStateAccess): {
       const isPk = pkFieldState.has(modelProp);
       if (isPk) pkColumns.push(propName);
 
-      const refTarget = referencesState.get(modelProp) as ModelProperty | undefined;
+      const refEntry = referencesState.get(modelProp) as
+        | { ref: ModelProperty; onDelete?: "CASCADE" | "RESTRICT" }
+        | undefined;
+      const refTarget = refEntry?.ref;
       const uuidMeta = uuidState.get(modelProp) as UuidMeta | undefined;
       const isCreatedAt = createdAtState.has(modelProp);
       const isUpdatedAt = updatedAtState.has(modelProp);
@@ -123,7 +127,7 @@ export function buildIR(program: ProgramStateAccess): {
       const maxVal = maxValueState.get(modelProp) as number | undefined;
       const vis = visibilityState.get(modelProp) as string | undefined;
 
-      const fieldType = resolveFieldType(modelProp, uuidMeta);
+      const fieldType = resolveFieldType(modelProp, uuidMeta, program);
       const columnName = toSnakeCase(propName);
 
       // Collect enum definitions
@@ -161,6 +165,9 @@ export function buildIR(program: ProgramStateAccess): {
               tableName: refTableMeta.name,
               fieldName: refTarget.name,
             };
+            if (refEntry?.onDelete) {
+              field.references.onDelete = refEntry.onDelete === "CASCADE" ? "cascade" : "restrict";
+            }
           }
         }
       }
@@ -239,14 +246,18 @@ export function buildIR(program: ProgramStateAccess): {
   return { tables, enums };
 }
 
-function resolveFieldType(prop: ModelProperty, uuidMeta: UuidMeta | undefined): FieldType {
+function resolveFieldType(
+  prop: ModelProperty,
+  uuidMeta: UuidMeta | undefined,
+  program: ProgramStateAccess,
+): FieldType {
   if (uuidMeta) {
     return { kind: "uuid", encoding: uuidMeta.encoding as UuidEncoding };
   }
 
   const type = prop.type;
   if (type.kind === "Scalar") {
-    return resolveScalarType(type as Scalar);
+    return resolveScalarType(type as Scalar, program);
   }
 
   // Enum types — TypeSpec Enum kind
@@ -264,13 +275,19 @@ function resolveFieldType(prop: ModelProperty, uuidMeta: UuidMeta | undefined): 
     return { kind: "enum", enumName, values };
   }
 
+  if (type.kind === "Model") {
+    return { kind: "jsonb" };
+  }
+
   return { kind: "text" };
 }
 
-function resolveScalarType(scalar: Scalar): FieldType {
+function resolveScalarType(scalar: Scalar, program: ProgramStateAccess): FieldType {
+  const maxLength = getMaxLength(program as unknown as Program, scalar as unknown as Scalar);
+
   switch (scalar.name) {
     case "string":
-      return { kind: "text" };
+      return maxLength !== undefined ? { kind: "varchar", length: maxLength } : { kind: "text" };
     case "int32":
       return { kind: "integer" };
     case "int64":
@@ -285,8 +302,12 @@ function resolveScalarType(scalar: Scalar): FieldType {
       return { kind: "timestamp" };
   }
 
+  if (maxLength !== undefined) {
+    return { kind: "varchar", length: maxLength };
+  }
+
   if (scalar.baseScalar) {
-    return resolveScalarType(scalar.baseScalar);
+    return resolveScalarType(scalar.baseScalar, program);
   }
 
   return { kind: "text" };

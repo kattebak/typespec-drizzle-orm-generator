@@ -52,6 +52,11 @@ const pgNullableWrapperMap = new Map<string, string>([
   ["timestamp", "nullableTimestamp"],
 ]);
 
+function textEnumColumn(col: string, values: string[]): string {
+  const union = values.map((v) => quoted(v)).join(" | ");
+  return `${fnCall("text", [col])}.$type<${union}>()`;
+}
+
 function pgDialect(): DialectConfig {
   return {
     dialect: "pg",
@@ -99,10 +104,14 @@ function pgDialect(): DialectConfig {
             col,
             objectLiteral([["withTimezone", "true"]], { concise: true }),
           ]);
+        case "jsonb":
+          return fnCall("jsonb", [col]);
         case "uuid":
           return fnCall("base36Uuid", [col]);
         case "enum":
           return fnCall(field.type.enumName, [col]);
+        case "textEnum":
+          return textEnumColumn(col, field.type.values);
       }
     },
   };
@@ -172,6 +181,11 @@ function sqliteDialect(): DialectConfig {
             col,
             objectLiteral([["mode", quoted("timestamp")]], { concise: true }),
           ]);
+        case "jsonb":
+          return fnCall("text", [
+            col,
+            objectLiteral([["mode", quoted("json")]], { concise: true }),
+          ]);
         case "uuid":
           return fnCall("base36Uuid", [col]);
         case "enum":
@@ -181,6 +195,8 @@ function sqliteDialect(): DialectConfig {
               concise: true,
             }),
           ]);
+        case "textEnum":
+          return textEnumColumn(col, field.type.values);
       }
     },
   };

@@ -5,7 +5,11 @@ using TypeSpec.Reflection;
 extern dec table(target: Model, name: valueof string, service: valueof string);
 extern dec primaryKey(target: Model, tableName: valueof string);
 extern dec pk(target: ModelProperty);
-extern dec references(target: ModelProperty, ref: ModelProperty);
+extern dec references(
+  target: ModelProperty,
+  ref: ModelProperty,
+  onDelete?: valueof "CASCADE" | "RESTRICT"
+);
 extern dec junction(target: Model);
 extern dec uuid(target: ModelProperty, encoding: valueof string, autoGenerate?: valueof boolean);
 extern dec createdAt(target: ModelProperty);
