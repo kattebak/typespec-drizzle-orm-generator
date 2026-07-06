@@ -123,7 +123,21 @@ describe("decorator functions", () => {
     $references(ctx, sourceProp, targetProp);
 
     const stored = program.stateMap(StateKeys.references).get(sourceProp);
-    assert.equal(stored, targetProp);
+    assert.equal(stored.ref, targetProp);
+    assert.equal(stored.onDelete, undefined);
+  });
+
+  it("$references records onDelete policy when supplied", () => {
+    const program = createMockProgram();
+    const ctx = createMockContext(program);
+    const sourceProp = mockProp("authorId");
+    const targetProp = mockPropWithModel("authorId", {});
+
+    $references(ctx, sourceProp, targetProp, "CASCADE");
+
+    const stored = program.stateMap(StateKeys.references).get(sourceProp);
+    assert.equal(stored.ref, targetProp);
+    assert.equal(stored.onDelete, "CASCADE");
   });
 
   // ===========================================

@@ -99,6 +99,8 @@ function pgDialect(): DialectConfig {
             col,
             objectLiteral([["withTimezone", "true"]], { concise: true }),
           ]);
+        case "jsonb":
+          return fnCall("jsonb", [col]);
         case "uuid":
           return fnCall("base36Uuid", [col]);
         case "enum":
@@ -171,6 +173,11 @@ function sqliteDialect(): DialectConfig {
           return fnCall("integer", [
             col,
             objectLiteral([["mode", quoted("timestamp")]], { concise: true }),
+          ]);
+        case "jsonb":
+          return fnCall("text", [
+            col,
+            objectLiteral([["mode", quoted("json")]], { concise: true }),
           ]);
         case "uuid":
           return fnCall("base36Uuid", [col]);

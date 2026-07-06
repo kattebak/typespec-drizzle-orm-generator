@@ -11,8 +11,12 @@ export type FieldType =
   | { kind: "doublePrecision" }
   | { kind: "boolean" }
   | { kind: "timestamp" }
+  | { kind: "jsonb" }
   | { kind: "uuid"; encoding: UuidEncoding }
   | { kind: "enum"; enumName: string; values: string[] };
+
+/** ON DELETE / ON UPDATE referential action for a foreign key */
+export type ReferentialAction = "cascade" | "restrict" | "no action" | "set null" | "set default";
 
 /** Column-level field definition extracted from a TypeSpec model property */
 export interface FieldDef {
@@ -27,6 +31,7 @@ export interface FieldDef {
   references?: {
     tableName: string;
     fieldName: string;
+    onDelete?: ReferentialAction;
   };
   createdAt: boolean;
   updatedAt: boolean;

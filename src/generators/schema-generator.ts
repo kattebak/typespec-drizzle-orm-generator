@@ -122,6 +122,7 @@ function collectFieldImports(field: FieldDef, dialect: DialectConfig): string[] 
       case "text":
       case "varchar":
       case "enum":
+      case "jsonb":
         return ["text"];
       case "integer":
       case "bigint":
@@ -153,6 +154,8 @@ function collectFieldImports(field: FieldDef, dialect: DialectConfig): string[] 
       return ["boolean"];
     case "timestamp":
       return ["timestamp"];
+    case "jsonb":
+      return ["jsonb"];
     case "uuid":
     case "enum":
       return [];

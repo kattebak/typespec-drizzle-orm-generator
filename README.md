@@ -212,7 +212,10 @@ model Author {
   @uuid("base36", true)           // UUID with base36 encoding, auto-generated
   authorId: string;
 
-  @references(Author.authorId)    // foreign key to another entity
+  @references(Author.authorId)             // foreign key to another entity
+  authorId: string;
+
+  @references(Author.authorId, "CASCADE")  // foreign key with ON DELETE policy
   authorId: string;
 
   @junction                       // on model: marks as many-to-many junction table
@@ -304,6 +307,23 @@ When using `sqlite`, types that don't exist natively in SQLite are mapped to com
 | `int64`       | `bigint({ mode: "number" })`        | `integer({ mode: "number" })`           |
 | `string` (with length) | `varchar({ length })`     | `text({ length })`                      |
 | TypeSpec `enum` | `pgEnum()`                        | `text()` (no native enums in SQLite)    |
+
+## Front-end option
+
+Set `frontend` in your `tspconfig.yaml` to choose which TypeSpec vocabulary the emitter reads. Defaults to `drizzle`.
+
+| Value     | Reads                                                                 |
+| --------- | -------------------------------------------------------------------- |
+| `drizzle` | This library's own `@table` / `@pk` / `@references` decorators.       |
+| `remit`   | The ElectroDB vocabulary (`@entity` / `@index`) from `typespec-electrodb-emitter`. |
+
+The `remit` front-end maps an ElectroDB model to a table: the primary `@index` becomes the primary key (composite when it has both `pk` and `sk`), each secondary `@index` becomes a named index, and a `collection` shared by two or more entities becomes an `ON DELETE CASCADE` foreign key from each member to the entity that owns the shared partition key.
+
+```yaml
+options:
+  "@kattebak/typespec-drizzle-orm-generator":
+    frontend: "remit"
+```
 
 ## Type mapping (PostgreSQL)
 

@@ -1,4 +1,4 @@
-import { type ChainMethod, chainCall, quoted } from "../codegen/index.js";
+import { type ChainMethod, chainCall, objectLiteral, quoted } from "../codegen/index.js";
 import type { FieldDef, TableDef } from "../ir/types.js";
 import type { DialectConfig } from "./dialect.js";
 import { toTableVariableName } from "./naming.js";
@@ -26,7 +26,13 @@ export function mapFieldToColumn(
   if (field.references) {
     const targetVar = toTableVariableName(field.references.tableName, shouldPluralize);
     const targetField = field.references.fieldName;
-    calls.push({ method: "references", args: [`() => ${targetVar}.${targetField}`] });
+    const refArgs = [`() => ${targetVar}.${targetField}`];
+    if (field.references.onDelete) {
+      refArgs.push(
+        objectLiteral([["onDelete", quoted(field.references.onDelete)]], { concise: true }),
+      );
+    }
+    calls.push({ method: "references", args: refArgs });
   }
 
   if (field.createdAt || field.updatedAt) {

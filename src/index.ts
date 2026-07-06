@@ -3,6 +3,7 @@ import { emitFile, resolvePath } from "@typespec/compiler";
 import { assemblePackage } from "./assembler.js";
 import type { Dialect } from "./generators/dialect.js";
 import { buildIR } from "./ir/builder.js";
+import { buildRemitIR } from "./ir/remit-builder.js";
 
 export {
   $check,
@@ -29,12 +30,19 @@ export interface EmitterOptions {
   "package-version"?: string;
   dialect?: Dialect;
   pluralize?: boolean;
+  /**
+   * Selects the front-end that reads the TypeSpec vocabulary.
+   * - "drizzle" (default): this library's own `@table`/`@pk`/`@references` decorators.
+   * - "remit": the ElectroDB vocabulary (`@entity`/`@index`) via `buildRemitIR`.
+   */
+  frontend?: "drizzle" | "remit";
 }
 
 export async function $onEmit(context: EmitContext<EmitterOptions>): Promise<void> {
   if (context.program.compilerOptions.noEmit) return;
 
-  const { tables, enums } = buildIR(context.program);
+  const { tables, enums } =
+    context.options.frontend === "remit" ? buildRemitIR(context.program) : buildIR(context.program);
 
   const config = {
     packageName: context.options["package-name"] ?? "drizzle-schema",

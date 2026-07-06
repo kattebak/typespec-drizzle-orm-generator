@@ -12,7 +12,7 @@ function isObjectExpression(node: unknown): node is ObjectExpression {
 }
 
 export function quoted(value: string): string {
-  return `"${value}"`;
+  return JSON.stringify(value);
 }
 
 export function fnCall(name: string, args: string[]): string {
