@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { DecoratorContext, Model, ModelProperty } from "@typespec/compiler";
+import { Numeric } from "@typespec/compiler";
 import { assemblePackage } from "../assembler.ts";
 import {
   $compositeUnique,
@@ -735,5 +736,124 @@ describe("end-to-end: decorators → IR builder → assemblePackage", () => {
     const schemaTs = files.get("schema.ts");
     assert.ok(schemaTs);
     assert.ok(schemaTs.includes('import { sql } from "drizzle-orm"'), "Missing sql import");
+  });
+});
+
+describe("resolution: real-world field types (buildIR)", () => {
+  function buildSingleTable(configure: (ctx: DecoratorContext, model: MockModel) => void) {
+    const program = createMockProgram();
+    const ctx = mockContext(program);
+    const model: MockModel = { kind: "Model", name: "Row", properties: new Map() };
+    const rowId: MockProp = {
+      kind: "ModelProperty",
+      name: "rowId",
+      type: mockScalar("string"),
+      optional: false,
+      model,
+    };
+    model.properties.set("rowId", rowId);
+    $table(ctx, model as unknown as Model, "Row", "test");
+    $primaryKey(ctx, model as unknown as Model, "rows");
+    $pk(ctx, rowId as unknown as ModelProperty);
+    configure(ctx, model);
+    const { tables } = buildIR(program);
+    const table = tables.find((t) => t.name === "Row");
+    assert.ok(table);
+    return table;
+  }
+
+  it("resolves a nested-model property to jsonb", () => {
+    const table = buildSingleTable((_ctx, model) => {
+      model.properties.set("metadata", {
+        kind: "ModelProperty",
+        name: "metadata",
+        type: { kind: "Model", name: "Metadata" } as unknown as ReturnType<typeof mockScalar>,
+        optional: false,
+        model,
+      });
+    });
+    const field = table.fields.find((f) => f.name === "metadata");
+    assert.equal(field?.type.kind, "jsonb");
+  });
+
+  it("resolves a maxLength-bounded scalar to varchar", () => {
+    const program = createMockProgram();
+    const ctx = mockContext(program);
+    const model: MockModel = { kind: "Model", name: "Row", properties: new Map() };
+    const rowId: MockProp = {
+      kind: "ModelProperty",
+      name: "rowId",
+      type: mockScalar("string"),
+      optional: false,
+      model,
+    };
+    const shortString = { kind: "Scalar", name: "ShortString", baseScalar: mockScalar("string") };
+    program.stateMap(Symbol.for("TypeSpec.maxLengthValues")).set(shortString, Numeric("64"));
+    const name: MockProp = {
+      kind: "ModelProperty",
+      name: "name",
+      type: shortString as unknown as ReturnType<typeof mockScalar>,
+      optional: false,
+      model,
+    };
+    model.properties.set("rowId", rowId);
+    model.properties.set("name", name);
+    $table(ctx, model as unknown as Model, "Row", "test");
+    $primaryKey(ctx, model as unknown as Model, "rows");
+    $pk(ctx, rowId as unknown as ModelProperty);
+
+    const { tables } = buildIR(program);
+    const field = tables.find((t) => t.name === "Row")?.fields.find((f) => f.name === "name");
+    assert.deepEqual(field?.type, { kind: "varchar", length: 64 });
+  });
+
+  it("carries the @references onDelete policy into the IR", () => {
+    const program = createMockProgram();
+    const ctx = mockContext(program);
+
+    const target: MockModel = { kind: "Model", name: "Target", properties: new Map() };
+    const targetId: MockProp = {
+      kind: "ModelProperty",
+      name: "targetId",
+      type: mockScalar("string"),
+      optional: false,
+      model: target,
+    };
+    target.properties.set("targetId", targetId);
+    $table(ctx, target as unknown as Model, "Target", "test");
+    $primaryKey(ctx, target as unknown as Model, "targets");
+    $pk(ctx, targetId as unknown as ModelProperty);
+
+    const source: MockModel = { kind: "Model", name: "Source", properties: new Map() };
+    const sourceId: MockProp = {
+      kind: "ModelProperty",
+      name: "sourceId",
+      type: mockScalar("string"),
+      optional: false,
+      model: source,
+    };
+    const fk: MockProp = {
+      kind: "ModelProperty",
+      name: "targetId",
+      type: mockScalar("string"),
+      optional: false,
+      model: source,
+    };
+    source.properties.set("sourceId", sourceId);
+    source.properties.set("targetId", fk);
+    $table(ctx, source as unknown as Model, "Source", "test");
+    $primaryKey(ctx, source as unknown as Model, "sources");
+    $pk(ctx, sourceId as unknown as ModelProperty);
+    $references(
+      ctx,
+      fk as unknown as ModelProperty,
+      targetId as unknown as ModelProperty,
+      "CASCADE",
+    );
+
+    const { tables } = buildIR(program);
+    const sourceTable = tables.find((t) => t.name === "Source");
+    const fkField = sourceTable?.fields.find((f) => f.name === "targetId");
+    assert.equal(fkField?.references?.onDelete, "cascade");
   });
 });

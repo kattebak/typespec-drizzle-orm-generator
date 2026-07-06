@@ -228,3 +228,40 @@ describe("package assembly", () => {
     assert.ok(index.includes('export * from "./describe.js"'));
   });
 });
+
+describe("schema-only assembly", () => {
+  const schemaOnlyFiles = assemblePackage(bookstoreTables, bookstoreEnums, {
+    ...config,
+    schemaOnly: true,
+  });
+
+  it("omits relations.ts and describe.ts", () => {
+    assert.ok(!schemaOnlyFiles.has("relations.ts"));
+    assert.ok(!schemaOnlyFiles.has("describe.ts"));
+    assert.ok(schemaOnlyFiles.has("schema.ts"));
+    assert.ok(schemaOnlyFiles.has("types.ts"));
+  });
+
+  it("emits types.ts without the Drizzle-v2 client type or relations import", () => {
+    const types = schemaOnlyFiles.get("types.ts");
+    assert.ok(types);
+    assert.ok(!types.includes("DrizzleClient"));
+    assert.ok(!types.includes("PgAsyncDatabase"));
+    assert.ok(!types.includes("./relations.js"));
+    assert.ok(types.includes("base36Uuid"));
+  });
+
+  it("barrels only types and schema", () => {
+    const index = schemaOnlyFiles.get("index.ts");
+    assert.ok(index);
+    assert.ok(!index.includes("./relations.js"));
+    assert.ok(!index.includes("./describe.js"));
+    assert.ok(index.includes("./schema.js"));
+  });
+
+  it("declares a Drizzle-v1-compatible peer range", () => {
+    const pkg = schemaOnlyFiles.get("package.json");
+    assert.ok(pkg);
+    assert.ok(pkg.includes('"drizzle-orm": ">=0.30.0"'));
+  });
+});

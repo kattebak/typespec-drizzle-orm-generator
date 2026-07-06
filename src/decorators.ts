@@ -22,8 +22,9 @@ export function $references(
   context: DecoratorContext,
   target: ModelProperty,
   ref: ModelProperty,
+  onDelete?: "CASCADE" | "RESTRICT",
 ): void {
-  context.program.stateMap(StateKeys.references).set(target, ref);
+  context.program.stateMap(StateKeys.references).set(target, { ref, onDelete });
 }
 
 export function $junction(context: DecoratorContext, target: Model): void {

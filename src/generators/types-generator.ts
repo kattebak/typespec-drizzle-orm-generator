@@ -1,12 +1,12 @@
 import { exportConst, fnCall, importDecl, quoted } from "../codegen/index.js";
 import type { DialectConfig, NullableWrapperDef } from "./dialect.js";
 
-export function generateTypes(dialect: DialectConfig): string {
+export function generateTypes(dialect: DialectConfig, schemaOnly = false): string {
   const sections: string[] = [];
 
   sections.push(importDecl(["customType"], dialect.coreModule));
   sections.push(`import short from ${quoted("short-uuid")};`);
-  sections.push(...drizzleClientImports(dialect));
+  if (!schemaOnly) sections.push(...drizzleClientImports(dialect));
   sections.push("");
 
   sections.push(`const translator = ${fnCall("short", ["short.constants.uuid25Base36"])};`);
@@ -38,9 +38,11 @@ export function generateTypes(dialect: DialectConfig): string {
     sections.push("");
   }
 
-  sections.push("/** Drizzle client type for use in describe function signatures */");
-  sections.push(drizzleClientType(dialect));
-  sections.push("");
+  if (!schemaOnly) {
+    sections.push("/** Drizzle client type for use in describe function signatures */");
+    sections.push(drizzleClientType(dialect));
+    sections.push("");
+  }
 
   return sections.join("\n");
 }

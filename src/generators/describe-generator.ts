@@ -33,18 +33,20 @@ function generateDescribeBlock(
 ): string[] {
   const lines: string[] = [];
   const tableVar = toTableVariableName(table.name, shouldPluralize);
-  const pkField = table.primaryKey.columns[0];
+  const pkFields = table.primaryKey.isComposite
+    ? table.primaryKey.columns
+    : [table.primaryKey.columns[0]];
   const funcName = `describe${table.name}`;
   const typeName = `${table.name}Description`;
+  const whereClause = `{ ${pkFields.join(", ")} }`;
 
   lines.push(...generateDescriptionType(table, relations, typeName, tableVar, shouldPluralize));
 
-  lines.push(
-    `export const ${funcName} = (`,
-    `  db: DrizzleClient,`,
-    `  ${pkField}: string,`,
-    `): Promise<${typeName} | undefined> =>`,
-  );
+  lines.push(`export const ${funcName} = (`, `  db: DrizzleClient,`);
+  for (const pkField of pkFields) {
+    lines.push(`  ${pkField}: string,`);
+  }
+  lines.push(`): Promise<${typeName} | undefined> =>`);
 
   if (relations.length > 0) {
     const withObj = objectLiteral(
@@ -53,12 +55,12 @@ function generateDescribeBlock(
     );
     lines.push(
       `  db.query.${tableVar}.findFirst({`,
-      `    where: { ${pkField} },`,
+      `    where: ${whereClause},`,
       `    with: ${withObj},`,
       "  });",
     );
   } else {
-    lines.push(`  db.query.${tableVar}.findFirst({`, `    where: { ${pkField} },`, "  });");
+    lines.push(`  db.query.${tableVar}.findFirst({`, `    where: ${whereClause},`, "  });");
   }
 
   return lines;

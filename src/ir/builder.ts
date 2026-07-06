@@ -1,4 +1,5 @@
-import type { Model, ModelProperty, Scalar } from "@typespec/compiler";
+import type { Model, ModelProperty, Program, Scalar } from "@typespec/compiler";
+import { getMaxLength } from "@typespec/compiler";
 import { toSnakeCase } from "../generators/naming.js";
 import { StateKeys } from "../lib.js";
 import type {
@@ -113,7 +114,10 @@ export function buildIR(program: ProgramStateAccess): {
       const isPk = pkFieldState.has(modelProp);
       if (isPk) pkColumns.push(propName);
 
-      const refTarget = referencesState.get(modelProp) as ModelProperty | undefined;
+      const refEntry = referencesState.get(modelProp) as
+        | { ref: ModelProperty; onDelete?: "CASCADE" | "RESTRICT" }
+        | undefined;
+      const refTarget = refEntry?.ref;
       const uuidMeta = uuidState.get(modelProp) as UuidMeta | undefined;
       const isCreatedAt = createdAtState.has(modelProp);
       const isUpdatedAt = updatedAtState.has(modelProp);
@@ -123,7 +127,7 @@ export function buildIR(program: ProgramStateAccess): {
       const maxVal = maxValueState.get(modelProp) as number | undefined;
       const vis = visibilityState.get(modelProp) as string | undefined;
 
-      const fieldType = resolveFieldType(modelProp, uuidMeta);
+      const fieldType = resolveFieldType(modelProp, uuidMeta, program);
       const columnName = toSnakeCase(propName);
 
       // Collect enum definitions
@@ -161,6 +165,9 @@ export function buildIR(program: ProgramStateAccess): {
               tableName: refTableMeta.name,
               fieldName: refTarget.name,
             };
+            if (refEntry?.onDelete) {
+              field.references.onDelete = refEntry.onDelete === "CASCADE" ? "cascade" : "restrict";
+            }
           }
         }
       }
@@ -196,33 +203,30 @@ export function buildIR(program: ProgramStateAccess): {
     const compositeUniques = compositeUniqueState.get(model) as CompositeUniqueMeta[] | undefined;
     const uniqueConstraints: UniqueConstraintDef[] = (compositeUniques ?? []).map((cu) => ({
       name: cu.name,
-      columns: normalizeModelPropertyArray(cu.columns, "composite unique columns").map(
-        (c) => c.name,
-      ),
+      columns: cu.columns.map((c) => c.name),
     }));
 
     // Indexes
     const indexDefs = indexDefState.get(model) as IndexMeta[] | undefined;
     const indexes: IndexDef[] = (indexDefs ?? []).map((idx) => ({
       name: idx.name,
-      columns: normalizeModelPropertyArray(idx.columns, "index columns").map((c) => c.name),
+      columns: idx.columns.map((c) => c.name),
       unique: idx.unique,
     }));
 
     // Composite foreign keys
     const fkDefs = foreignKeyDefState.get(model) as ForeignKeyMeta[] | undefined;
     const foreignKeys: ForeignKeyDef[] = (fkDefs ?? []).map((fk) => {
-      const foreignColumns = normalizeModelPropertyArray(fk.foreignColumns, "foreign key columns");
-      const foreignModel = foreignColumns[0]?.model;
+      const foreignModel = fk.foreignColumns[0]?.model;
       const foreignTableMeta = foreignModel
         ? (tableState.get(foreignModel) as TableMeta | undefined)
         : undefined;
 
       return {
         name: fk.name,
-        columns: normalizeModelPropertyArray(fk.columns, "foreign key columns").map((c) => c.name),
+        columns: fk.columns.map((c) => c.name),
         foreignTable: foreignTableMeta?.name ?? "",
-        foreignColumns: foreignColumns.map((c) => c.name),
+        foreignColumns: fk.foreignColumns.map((c) => c.name),
       };
     });
 
@@ -242,41 +246,18 @@ export function buildIR(program: ProgramStateAccess): {
   return { tables, enums };
 }
 
-function normalizeModelPropertyArray(value: unknown, label: string): ModelProperty[] {
-  if (Array.isArray(value)) {
-    if (value.every(isModelPropertyLike)) return value as ModelProperty[];
-    throw new Error(`Invalid ${label}: expected ModelProperty[]`);
-  }
-
-  if (isTupleValue(value)) {
-    return normalizeModelPropertyArray(value.values, label);
-  }
-
-  if (isModelPropertyLike(value)) return [value as ModelProperty];
-
-  throw new Error(`Invalid ${label}: expected ModelProperty or ModelProperty[]`);
-}
-
-function isModelPropertyLike(value: unknown): value is ModelProperty {
-  if (typeof value !== "object" || value === null) return false;
-  const obj = value as Record<string, unknown>;
-  return typeof obj.name === "string";
-}
-
-function isTupleValue(value: unknown): value is { values: unknown[] } {
-  if (typeof value !== "object" || value === null) return false;
-  const obj = value as Record<string, unknown>;
-  return Array.isArray(obj.values);
-}
-
-function resolveFieldType(prop: ModelProperty, uuidMeta: UuidMeta | undefined): FieldType {
+function resolveFieldType(
+  prop: ModelProperty,
+  uuidMeta: UuidMeta | undefined,
+  program: ProgramStateAccess,
+): FieldType {
   if (uuidMeta) {
     return { kind: "uuid", encoding: uuidMeta.encoding as UuidEncoding };
   }
 
   const type = prop.type;
   if (type.kind === "Scalar") {
-    return resolveScalarType(type as Scalar);
+    return resolveScalarType(type as Scalar, program);
   }
 
   // Enum types — TypeSpec Enum kind
@@ -294,13 +275,19 @@ function resolveFieldType(prop: ModelProperty, uuidMeta: UuidMeta | undefined): 
     return { kind: "enum", enumName, values };
   }
 
+  if (type.kind === "Model") {
+    return { kind: "jsonb" };
+  }
+
   return { kind: "text" };
 }
 
-function resolveScalarType(scalar: Scalar): FieldType {
+function resolveScalarType(scalar: Scalar, program: ProgramStateAccess): FieldType {
+  const maxLength = getMaxLength(program as unknown as Program, scalar as unknown as Scalar);
+
   switch (scalar.name) {
     case "string":
-      return { kind: "text" };
+      return maxLength !== undefined ? { kind: "varchar", length: maxLength } : { kind: "text" };
     case "int32":
       return { kind: "integer" };
     case "int64":
@@ -315,8 +302,12 @@ function resolveScalarType(scalar: Scalar): FieldType {
       return { kind: "timestamp" };
   }
 
+  if (maxLength !== undefined) {
+    return { kind: "varchar", length: maxLength };
+  }
+
   if (scalar.baseScalar) {
-    return resolveScalarType(scalar.baseScalar);
+    return resolveScalarType(scalar.baseScalar, program);
   }
 
   return { kind: "text" };

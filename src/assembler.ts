@@ -13,6 +13,7 @@ export interface EmitterConfig {
   packageVersion: string;
   dialect: Dialect;
   pluralize: boolean;
+  schemaOnly?: boolean;
 }
 
 /**
@@ -28,16 +29,22 @@ export function assemblePackage(
 ): Map<string, string> {
   const graph = buildRelationGraph(tables, config.pluralize);
   const dialect = resolveDialect(config.dialect);
+  const schemaOnly = config.schemaOnly ?? false;
 
-  return new Map([
+  const files = new Map([
     ["package.json", generatePackageJson(config)],
     ["tsconfig.json", generateTsConfig()],
-    ["types.ts", generateTypes(dialect)],
+    ["types.ts", generateTypes(dialect, schemaOnly)],
     ["schema.ts", generateSchema(tables, enums, dialect, config.pluralize)],
-    ["relations.ts", generateRelations(tables, graph, config.pluralize)],
-    ["describe.ts", generateDescribe(tables, graph, config.pluralize)],
-    ["index.ts", generateIndex()],
+    ["index.ts", generateIndex(schemaOnly)],
   ]);
+
+  if (!schemaOnly) {
+    files.set("relations.ts", generateRelations(tables, graph, config.pluralize));
+    files.set("describe.ts", generateDescribe(tables, graph, config.pluralize));
+  }
+
+  return files;
 }
 
 function generatePackageJson(config: EmitterConfig): string {
@@ -61,7 +68,7 @@ function generatePackageJson(config: EmitterConfig): string {
       "short-uuid": "^5.2.0",
     },
     peerDependencies: {
-      "drizzle-orm": ">=1.0.0-beta.1",
+      "drizzle-orm": config.schemaOnly ? ">=0.30.0" : ">=1.0.0-beta.1",
       typescript: ">=5.0.0",
     },
   };
