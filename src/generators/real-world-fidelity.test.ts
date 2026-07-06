@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { buildRelationGraph } from "../ir/relation-graph.ts";
-import type { FieldDef, TableDef } from "../ir/types.ts";
+import type { FieldDef, FieldType, TableDef } from "../ir/types.ts";
 import { mapFieldToColumn } from "./column-mapper.ts";
 import { generateDescribe } from "./describe-generator.ts";
 import { resolveDialect } from "./dialect.ts";
@@ -194,4 +194,56 @@ describe("onDelete referential action", () => {
     assert.ok(col.includes(".references(() => translators.translatorId)"));
     assert.ok(!col.includes("onDelete"));
   });
+});
+
+describe("every column kind across both dialects", () => {
+  const kinds: FieldType[] = [
+    { kind: "text" },
+    { kind: "varchar", length: 32 },
+    { kind: "integer" },
+    { kind: "bigint" },
+    { kind: "real" },
+    { kind: "doublePrecision" },
+    { kind: "boolean" },
+    { kind: "timestamp" },
+    { kind: "jsonb" },
+  ];
+
+  function everyKindTable(nullable: boolean): TableDef {
+    const fields: FieldDef[] = [baseField("rowId", { type: { kind: "uuid", encoding: "base36" } })];
+    for (const type of kinds) {
+      fields.push(baseField(`${type.kind}Col`, { type, nullable }));
+    }
+    return {
+      name: "Everything",
+      service: "test",
+      tableName: "everything",
+      primaryKey: { tableName: "everything", columns: ["rowId"], isComposite: false },
+      isJunction: false,
+      fields,
+      foreignKeys: [],
+      indexes: [],
+      uniqueConstraints: [],
+    };
+  }
+
+  for (const dialect of [pg, sqlite]) {
+    it(`renders every non-nullable column kind (${dialect.dialect})`, () => {
+      const output = generateSchema([everyKindTable(false)], [], dialect, false);
+      assert.ok(output.includes("export const everything ="));
+      assert.ok(output.includes("textCol:"));
+      assert.ok(output.includes("booleanCol:"));
+      assert.ok(output.includes("jsonbCol:"));
+      // no nullable wrapper helpers for the non-nullable variant
+      assert.ok(!output.includes("nullable"));
+    });
+
+    it(`renders every nullable column kind (${dialect.dialect})`, () => {
+      const output = generateSchema([everyKindTable(true)], [], dialect, false);
+      assert.ok(output.includes("export const everything ="));
+      // pg has wrappers for text; sqlite maps a nullable bigint through the raw type
+      assert.ok(output.includes("bigintCol:"));
+      assert.ok(output.includes("timestampCol:"));
+    });
+  }
 });
