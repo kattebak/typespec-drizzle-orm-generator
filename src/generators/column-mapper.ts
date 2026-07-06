@@ -15,7 +15,7 @@ export function mapFieldToColumn(
     calls.push({ method: "primaryKey" });
   }
 
-  if (field.uuid?.autoGenerate) {
+  if (field.uuid?.autoGenerate || field.autoGenerateId) {
     calls.push({ method: "$defaultFn", args: ["() => generateBase36Id()"] });
   }
 

@@ -44,13 +44,32 @@ export interface EmitterOptions {
    * themselves. Defaults to false.
    */
   "schema-only"?: boolean;
+  /**
+   * How enum-typed properties become columns.
+   * - "native" (default): a Postgres `pgEnum` (a `CREATE TYPE` + typed column).
+   * - "text": a plain `text` column. Use when the target stores enums as strings
+   *   (e.g. matching a DynamoDB single-table port) and you want no `ALTER TYPE`
+   *   migrations. Currently honoured by the `remit` front-end.
+   */
+  "enum-mode"?: "native" | "text";
+  /**
+   * Emit foreign-key `references()` clauses. Defaults to true. Set false when the
+   * consumer manages referential integrity and delete cascades itself (so a
+   * database-level `ON DELETE CASCADE` would fight the application). In the remit
+   * front-end this drops the collection-derived foreign keys.
+   */
+  "foreign-keys"?: boolean;
 }
 
 export async function $onEmit(context: EmitContext<EmitterOptions>): Promise<void> {
   if (context.program.compilerOptions.noEmit) return;
 
+  const enumAsText = context.options["enum-mode"] === "text";
+  const foreignKeys = context.options["foreign-keys"] ?? true;
   const { tables, enums } =
-    context.options.frontend === "remit" ? buildRemitIR(context.program) : buildIR(context.program);
+    context.options.frontend === "remit"
+      ? buildRemitIR(context.program, { enumAsText, foreignKeys })
+      : buildIR(context.program);
 
   const config = {
     packageName: context.options["package-name"] ?? "drizzle-schema",

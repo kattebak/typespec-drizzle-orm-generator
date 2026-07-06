@@ -122,6 +122,7 @@ function collectFieldImports(field: FieldDef, dialect: DialectConfig): string[] 
       case "text":
       case "varchar":
       case "enum":
+      case "textEnum":
       case "jsonb":
         return ["text"];
       case "integer":
@@ -156,6 +157,8 @@ function collectFieldImports(field: FieldDef, dialect: DialectConfig): string[] 
       return ["timestamp"];
     case "jsonb":
       return ["jsonb"];
+    case "textEnum":
+      return ["text"];
     case "uuid":
     case "enum":
       return [];
@@ -181,6 +184,9 @@ function collectTypesImports(tables: TableDef[], dialect: DialectConfig): string
         if (field.uuid.autoGenerate) {
           imports.add("generateBase36Id");
         }
+      }
+      if (field.autoGenerateId) {
+        imports.add("generateBase36Id");
       }
       if (field.nullable && !field.uuid) {
         const wrapperName = dialect.nullableWrapperName(field.type.kind);

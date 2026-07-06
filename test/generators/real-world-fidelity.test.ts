@@ -122,6 +122,42 @@ describe("varchar columns", () => {
   });
 });
 
+describe("textEnum columns", () => {
+  const row: TableDef = {
+    name: "Row",
+    service: "s",
+    tableName: "rows",
+    primaryKey: { tableName: "rows", columns: ["rowId"], isComposite: false },
+    isJunction: false,
+    fields: [
+      baseField("rowId", { columnName: "row_id", type: { kind: "uuid", encoding: "base36" } }),
+      baseField("status", { type: { kind: "textEnum", values: ["active", "deleted"] } }),
+      baseField("phase", {
+        type: { kind: "textEnum", values: ["idle", "done"] },
+        nullable: true,
+      }),
+    ],
+    foreignKeys: [],
+    indexes: [],
+    uniqueConstraints: [],
+  };
+
+  it("emits a text column with a $type union for a non-null enum", () => {
+    const output = generateSchema([row], [], pg);
+    assert.ok(output.includes('status: text("status").$type<"active" | "deleted">().notNull(),'));
+  });
+
+  it("keeps the $type union on a nullable enum (no notNull)", () => {
+    const output = generateSchema([row], [], pg);
+    assert.ok(output.includes('phase: text("phase").$type<"idle" | "done">(),'));
+  });
+
+  it("declares no pgEnum for text-backed enums", () => {
+    const output = generateSchema([row], [], pg);
+    assert.ok(!output.includes("pgEnum"));
+  });
+});
+
 describe("onDelete referential action", () => {
   function tableFor(field: FieldDef): TableDef {
     return {

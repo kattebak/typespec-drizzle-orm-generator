@@ -79,6 +79,7 @@ model BodyPart {
 describe("remit entity front-end (buildRemitIR)", () => {
   let tables: TableDef[];
   let byName: Map<string, TableDef>;
+  let program: Awaited<ReturnType<typeof createTestHost>>["program"];
 
   before(async () => {
     const host = await createTestHost();
@@ -92,7 +93,8 @@ describe("remit entity front-end (buildRemitIR)", () => {
     host.addTypeSpecFile("electrodb.tsp", `import "./electrodb.js";\n${STUB_DECORATORS}`);
     host.addTypeSpecFile("main.tsp", MODELS);
     await host.compile("main.tsp");
-    ({ tables } = buildRemitIR(host.program));
+    program = host.program;
+    ({ tables } = buildRemitIR(program));
     byName = new Map(tables.map((t) => [t.name, t]));
   });
 
@@ -116,6 +118,15 @@ describe("remit entity front-end (buildRemitIR)", () => {
     assert.equal(star?.type.kind, "enum");
   });
 
+  it("resolves enums to text-backed union columns and emits no enum defs under enum-mode text", () => {
+    const result = buildRemitIR(program, { enumAsText: true });
+    const star = result.tables
+      .find((t) => t.name === "ThreadMessage")
+      ?.fields.find((f) => f.name === "star");
+    assert.equal(star?.type.kind, "textEnum");
+    assert.equal(result.enums.length, 0);
+  });
+
   it("resolves a string-valued union to a text column", () => {
     const flag = byName.get("ThreadMessage")?.fields.find((f) => f.name === "flag");
     assert.equal(flag?.type.kind, "text");
@@ -136,5 +147,11 @@ describe("remit entity front-end (buildRemitIR)", () => {
   it("does not add a foreign key on the collection owner", () => {
     const owner = byName.get("Message");
     assert.ok(owner?.fields.every((f) => !f.references));
+  });
+
+  it("omits all foreign keys when foreignKeys is false", () => {
+    const result = buildRemitIR(program, { foreignKeys: false });
+    const anyRef = result.tables.some((t) => t.fields.some((f) => f.references));
+    assert.equal(anyRef, false);
   });
 });

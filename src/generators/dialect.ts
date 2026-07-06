@@ -52,6 +52,11 @@ const pgNullableWrapperMap = new Map<string, string>([
   ["timestamp", "nullableTimestamp"],
 ]);
 
+function textEnumColumn(col: string, values: string[]): string {
+  const union = values.map((v) => quoted(v)).join(" | ");
+  return `${fnCall("text", [col])}.$type<${union}>()`;
+}
+
 function pgDialect(): DialectConfig {
   return {
     dialect: "pg",
@@ -105,6 +110,8 @@ function pgDialect(): DialectConfig {
           return fnCall("base36Uuid", [col]);
         case "enum":
           return fnCall(field.type.enumName, [col]);
+        case "textEnum":
+          return textEnumColumn(col, field.type.values);
       }
     },
   };
@@ -188,6 +195,8 @@ function sqliteDialect(): DialectConfig {
               concise: true,
             }),
           ]);
+        case "textEnum":
+          return textEnumColumn(col, field.type.values);
       }
     },
   };

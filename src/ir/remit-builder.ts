@@ -51,10 +51,20 @@ interface CollectionMember {
   pkAttr: string;
 }
 
-export function buildRemitIR(program: Program): {
+export interface RemitBuildOptions {
+  enumAsText?: boolean;
+  foreignKeys?: boolean;
+}
+
+export function buildRemitIR(
+  program: Program,
+  options: RemitBuildOptions = {},
+): {
   tables: TableDef[];
   enums: EnumDef[];
 } {
+  const enumAsText = options.enumAsText ?? false;
+  const foreignKeys = options.foreignKeys ?? true;
   const tables: TableDef[] = [];
   const enums: EnumDef[] = [];
   const seenEnums = new Set<string>();
@@ -79,10 +89,11 @@ export function buildRemitIR(program: Program): {
     const patterns = decoratorsByName(model, "@index").map(readIndexDecorator);
     const primary = patterns.find((p) => !p.index);
     const pkColumns = primary ? [...primary.pk, ...primary.sk] : [];
+    const singlePkColumn = pkColumns.length === 1 ? pkColumns[0] : undefined;
 
     const fields: FieldDef[] = [];
     for (const [propName, prop] of model.properties) {
-      const resolved = resolveFieldType(prop);
+      const resolved = resolveFieldType(prop, enumAsText);
       if (resolved.enumDef && !seenEnums.has(resolved.enumDef.name)) {
         seenEnums.add(resolved.enumDef.name);
         enums.push(resolved.enumDef);
@@ -97,6 +108,10 @@ export function buildRemitIR(program: Program): {
         createdAt: false,
         updatedAt: false,
       };
+
+      if (propName === singlePkColumn && resolved.type.kind === "text") {
+        field.autoGenerateId = true;
+      }
 
       const defaultValue = extractDefaultValue(prop);
       if (defaultValue !== undefined) field.defaultValue = defaultValue;
@@ -138,7 +153,7 @@ export function buildRemitIR(program: Program): {
     });
   }
 
-  applyCollectionForeignKeys(tables, collections);
+  if (foreignKeys) applyCollectionForeignKeys(tables, collections);
 
   return { tables, enums };
 }
@@ -251,11 +266,17 @@ interface ResolvedField {
   enumDef?: EnumDef;
 }
 
-function resolveFieldType(prop: ModelProperty): ResolvedField {
+function resolveFieldType(prop: ModelProperty, enumAsText: boolean): ResolvedField {
   const type = prop.type;
 
   if (type.kind === "Scalar") return { type: resolveScalarType(type) };
-  if (type.kind === "Enum") return resolveEnumType(type);
+  if (type.kind === "Enum") {
+    if (!enumAsText) return resolveEnumType(type);
+    const values = [...type.members.values()].map((m) =>
+      m.value !== undefined ? String(m.value) : m.name,
+    );
+    return { type: { kind: "textEnum", values } };
+  }
   if (type.kind === "Model") return { type: { kind: "jsonb" } };
   if (type.kind === "Union") {
     return isStringUnion(type) ? { type: { kind: "text" } } : { type: { kind: "jsonb" } };
