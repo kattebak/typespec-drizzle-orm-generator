@@ -1,5 +1,5 @@
-import * as schema from "./bookstore-schema.ts";
-import type { createTestDb } from "./db.ts";
+import * as schema from "./bookstore-schema.js";
+import type { createTestDb } from "./db.js";
 
 const now = "2026-01-15T10:00:00.000Z";
 

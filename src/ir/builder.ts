@@ -203,30 +203,32 @@ export function buildIR(program: ProgramStateAccess): {
     const compositeUniques = compositeUniqueState.get(model) as CompositeUniqueMeta[] | undefined;
     const uniqueConstraints: UniqueConstraintDef[] = (compositeUniques ?? []).map((cu) => ({
       name: cu.name,
-      columns: cu.columns.map((c) => c.name),
+      columns: toModelProperties(cu.columns).map((c) => c.name),
     }));
 
     // Indexes
     const indexDefs = indexDefState.get(model) as IndexMeta[] | undefined;
     const indexes: IndexDef[] = (indexDefs ?? []).map((idx) => ({
       name: idx.name,
-      columns: idx.columns.map((c) => c.name),
+      columns: toModelProperties(idx.columns).map((c) => c.name),
       unique: idx.unique,
     }));
 
     // Composite foreign keys
     const fkDefs = foreignKeyDefState.get(model) as ForeignKeyMeta[] | undefined;
     const foreignKeys: ForeignKeyDef[] = (fkDefs ?? []).map((fk) => {
-      const foreignModel = fk.foreignColumns[0]?.model;
+      const localColumns = toModelProperties(fk.columns);
+      const foreignColumns = toModelProperties(fk.foreignColumns);
+      const foreignModel = foreignColumns[0]?.model;
       const foreignTableMeta = foreignModel
         ? (tableState.get(foreignModel) as TableMeta | undefined)
         : undefined;
 
       return {
         name: fk.name,
-        columns: fk.columns.map((c) => c.name),
+        columns: localColumns.map((c) => c.name),
         foreignTable: foreignTableMeta?.name ?? "",
-        foreignColumns: fk.foreignColumns.map((c) => c.name),
+        foreignColumns: foreignColumns.map((c) => c.name),
       };
     });
 
@@ -244,6 +246,21 @@ export function buildIR(program: ProgramStateAccess): {
   }
 
   return { tables, enums };
+}
+
+/**
+ * Normalizes a `ModelProperty[]` decorator argument.
+ *
+ * Passed as a plain array when a decorator is invoked directly (unit tests), and
+ * as a marshalled tuple value (`{ values: ModelProperty[] }`) when the emitter
+ * runs against compiled TypeSpec.
+ */
+function toModelProperties(columns: unknown): ModelProperty[] {
+  if (Array.isArray(columns)) return columns as ModelProperty[];
+  if (columns && typeof columns === "object" && "values" in columns) {
+    return (columns as { values: ModelProperty[] }).values;
+  }
+  throw new Error("Expected a ModelProperty[] or tuple value for decorator columns");
 }
 
 function resolveFieldType(

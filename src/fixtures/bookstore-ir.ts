@@ -1,4 +1,4 @@
-import type { EnumDef, TableDef } from "../../src/ir/types.ts";
+import type { EnumDef, TableDef } from "../ir/types.js";
 
 // ============================================
 // Author

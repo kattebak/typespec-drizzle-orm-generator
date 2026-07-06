@@ -10,8 +10,8 @@ import {
   importDecl,
   objectLiteral,
   quoted,
-} from "../../src/codegen/ast-helpers.ts";
-import { RawCode } from "../../src/codegen/stringify.ts";
+} from "./ast-helpers.ts";
+import { RawCode } from "./stringify.ts";
 
 describe("quoted", () => {
   it("wraps a string in double quotes", () => {

@@ -18,8 +18,8 @@ import {
   $unique,
   $updatedAt,
   $uuid,
-} from "../../src/decorators.ts";
-import { StateKeys } from "../../src/lib.ts";
+} from "./decorators.ts";
+import { StateKeys } from "./lib.ts";
 
 /**
  * Creates a mock TypeSpec Program-like object with state maps and sets.

@@ -11,7 +11,7 @@ import {
   $table,
   $updatedAt,
   $uuid,
-} from "../src/index.ts";
+} from "./index.ts";
 
 describe("package exports", () => {
   it("exports $lib with correct library name", () => {

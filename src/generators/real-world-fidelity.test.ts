@@ -1,11 +1,11 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { mapFieldToColumn } from "../../src/generators/column-mapper.ts";
-import { generateDescribe } from "../../src/generators/describe-generator.ts";
-import { resolveDialect } from "../../src/generators/dialect.ts";
-import { generateSchema } from "../../src/generators/schema-generator.ts";
-import { buildRelationGraph } from "../../src/ir/relation-graph.ts";
-import type { FieldDef, TableDef } from "../../src/ir/types.ts";
+import { buildRelationGraph } from "../ir/relation-graph.ts";
+import type { FieldDef, TableDef } from "../ir/types.ts";
+import { mapFieldToColumn } from "./column-mapper.ts";
+import { generateDescribe } from "./describe-generator.ts";
+import { resolveDialect } from "./dialect.ts";
+import { generateSchema } from "./schema-generator.ts";
 
 const pg = resolveDialect("pg");
 const sqlite = resolveDialect("sqlite");

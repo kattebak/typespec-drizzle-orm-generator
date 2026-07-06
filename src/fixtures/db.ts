@@ -1,6 +1,6 @@
 import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
-import { relations } from "./bookstore-relations.ts";
+import { relations } from "./bookstore-relations.js";
 
 export function createTestDb() {
   const sqlite = new Database(":memory:");
