@@ -8,6 +8,8 @@ export interface NullableWrapperDef {
   name: string;
   dataType: string;
   jsType: string;
+  driverType?: string;
+  fromDriver?: string;
 }
 
 export interface DialectConfig {
@@ -36,7 +38,13 @@ const pgNullableWrappers: readonly NullableWrapperDef[] = [
   { name: "nullableText", dataType: "text", jsType: "string" },
   { name: "nullableInteger", dataType: "integer", jsType: "number" },
   { name: "nullableReal", dataType: "real", jsType: "number" },
-  { name: "nullableBigint", dataType: "bigint", jsType: "number" },
+  {
+    name: "nullableBigint",
+    dataType: "bigint",
+    jsType: "number",
+    driverType: "number | string",
+    fromDriver: "(v) => (v == null ? undefined : Number(v))",
+  },
   { name: "nullableDoublePrecision", dataType: "double precision", jsType: "number" },
   { name: "nullableBoolean", dataType: "boolean", jsType: "boolean" },
   { name: "nullableTimestamp", dataType: "timestamp with time zone", jsType: "Date" },

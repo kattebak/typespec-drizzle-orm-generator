@@ -89,6 +89,13 @@ describe("types generator", () => {
   it("nullableTimestamp uses timestamp with time zone dataType", () => {
     assert.ok(typesOutput.includes('dataType: () => "timestamp with time zone",'));
   });
+
+  it("nullableBigint coerces the string driver value to a number", () => {
+    assert.ok(typesOutput.includes("export const nullableBigint = customType<{"));
+    assert.ok(typesOutput.includes("  data: number | undefined;"));
+    assert.ok(typesOutput.includes("  driverData: number | string | null;"));
+    assert.ok(typesOutput.includes("fromDriver: (v) => (v == null ? undefined : Number(v)),"));
+  });
 });
 
 describe("index generator", () => {
