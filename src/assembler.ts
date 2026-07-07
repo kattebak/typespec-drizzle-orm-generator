@@ -58,6 +58,7 @@ function generatePackageJson(config: EmitterConfig): string {
       ".": {
         types: "./dist/index.d.ts",
         import: "./dist/index.js",
+        default: "./dist/index.js",
       },
     },
     scripts: {
