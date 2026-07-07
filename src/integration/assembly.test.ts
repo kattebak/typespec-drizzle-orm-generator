@@ -56,6 +56,19 @@ describe("package assembly", () => {
     assert.ok(pkg.exports["."]);
     assert.equal(pkg.exports["."].import, "./dist/index.js");
     assert.equal(pkg.exports["."].types, "./dist/index.d.ts");
+    assert.equal(pkg.exports["."].default, "./dist/index.js");
+  });
+
+  it("package.json exports a require/default condition for CJS consumers", () => {
+    const content = files.get("package.json");
+    assert.ok(content);
+    const pkg = JSON.parse(content);
+    const conditions = Object.keys(pkg.exports["."]);
+    assert.ok(
+      conditions.includes("default"),
+      "exports must include a default condition so CJS resolvers (drizzle-kit) can resolve the package",
+    );
+    assert.equal(conditions.at(-1), "default", "default must be the last condition");
   });
 
   it("package.json includes build and prepare scripts", () => {
