@@ -61,11 +61,13 @@ function drizzleClientImports(dialect: DialectConfig): string[] {
 }
 
 function generateNullableWrapper(wrapper: NullableWrapperDef): string {
-  const typeParam = `<{\n  data: ${wrapper.jsType} | undefined;\n  driverData: ${wrapper.jsType} | null;\n}>`;
+  const driverType = wrapper.driverType ?? wrapper.jsType;
+  const fromDriver = wrapper.fromDriver ?? "(v) => v ?? undefined";
+  const typeParam = `<{\n  data: ${wrapper.jsType} | undefined;\n  driverData: ${driverType} | null;\n}>`;
   const configObj = [
     "{",
     `  dataType: () => ${quoted(wrapper.dataType)},`,
-    `  fromDriver: (v) => v ?? undefined,`,
+    `  fromDriver: ${fromDriver},`,
     "}",
   ].join("\n");
   return exportConst(wrapper.name, `customType${typeParam}(${configObj})`);
