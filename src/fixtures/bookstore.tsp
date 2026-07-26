@@ -1,6 +1,6 @@
 import "@kattebak/typespec-drizzle-orm-generator";
 
-using DrizzleEmitter;
+using Drizzle;
 
 namespace Bookstore;
 

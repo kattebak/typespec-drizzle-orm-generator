@@ -5,6 +5,15 @@ import type { Dialect } from "./generators/dialect.js";
 import { buildIR } from "./ir/builder.js";
 import { buildRemitIR } from "./ir/remit-builder.js";
 
+/**
+ * Binds every decorator exported from this module into the `Drizzle` TypeSpec
+ * namespace, matching `namespace Drizzle;` in `tsp/main.tsp`. Without it the
+ * compiler binds them globally, where `@createdAt`, `@updatedAt`, `@minValue`
+ * and `@maxValue` collide with the same names declared by the TypeSpec standard
+ * library and by sibling emitters.
+ */
+export const namespace = "Drizzle";
+
 export {
   $check,
   $columnVisibility,

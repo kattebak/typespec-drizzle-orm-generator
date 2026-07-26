@@ -22,7 +22,7 @@ function stringifyValue(value: unknown): string {
     case "undefined":
       return "undefined";
     case "string":
-      return `"${value}"`;
+      return JSON.stringify(value);
     case "number":
     case "boolean":
       return String(value);

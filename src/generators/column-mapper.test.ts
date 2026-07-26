@@ -321,6 +321,18 @@ describe("column mapper", () => {
       'statusEnum("status").notNull().default("draft")',
     );
   });
+
+  it("maps a JSON field with an empty array default", () => {
+    const field = makeField({
+      name: "flags",
+      columnName: "flags",
+      type: { kind: "jsonb" },
+      nullable: false,
+      defaultValue: [],
+    });
+    const table = makeTable(["id"]);
+    assert.equal(mapFieldToColumn(field, table, pg), 'jsonb("flags").notNull().default([])');
+  });
 });
 
 // ===========================================
