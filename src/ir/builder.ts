@@ -2,16 +2,21 @@ import type { Model, ModelProperty, Program, Scalar } from "@typespec/compiler";
 import { getMaxLength } from "@typespec/compiler";
 import { toSnakeCase } from "../generators/naming.js";
 import { StateKeys } from "../lib.js";
+import { readDefaultValue } from "./default-value.js";
+import { readIndexDefs, reportUnclaimedIndexDefs, toModelProperties } from "./index-def.js";
 import type {
   EnumDef,
   FieldDef,
   FieldType,
   ForeignKeyDef,
   IndexDef,
+  ProgramStateAccess,
   TableDef,
   UniqueConstraintDef,
   UuidEncoding,
 } from "./types.js";
+
+export type { ProgramStateAccess } from "./types.js";
 
 interface TableMeta {
   name: string;
@@ -32,25 +37,10 @@ interface CompositeUniqueMeta {
   columns: ModelProperty[];
 }
 
-interface IndexMeta {
-  name: string;
-  columns: ModelProperty[];
-  unique: boolean;
-}
-
 interface ForeignKeyMeta {
   name: string;
   columns: ModelProperty[];
   foreignColumns: ModelProperty[];
-}
-
-/**
- * Minimal Program-like interface for state access.
- * Allows testing without importing the full @typespec/compiler Program.
- */
-export interface ProgramStateAccess {
-  stateMap(key: symbol): Map<unknown, unknown>;
-  stateSet(key: symbol): Set<unknown>;
 }
 
 /**
@@ -79,6 +69,7 @@ export function buildIR(program: ProgramStateAccess): {
   const tables: TableDef[] = [];
   const enums: EnumDef[] = [];
   const seenEnums = new Set<string>();
+  const claimed = new Set<Model>();
 
   const tableState = program.stateMap(StateKeys.table);
   const pkTableState = program.stateMap(StateKeys.primaryKey);
@@ -91,7 +82,6 @@ export function buildIR(program: ProgramStateAccess): {
   const uniqueState = program.stateSet(StateKeys.unique);
   const compositeUniqueState = program.stateMap(StateKeys.compositeUnique);
   const checkState = program.stateMap(StateKeys.check);
-  const indexDefState = program.stateMap(StateKeys.indexDef);
   const foreignKeyDefState = program.stateMap(StateKeys.foreignKeyDef);
   const minValueState = program.stateMap(StateKeys.minValue);
   const maxValueState = program.stateMap(StateKeys.maxValue);
@@ -100,6 +90,7 @@ export function buildIR(program: ProgramStateAccess): {
   for (const [target, meta] of tableState) {
     const model = target as Model;
     if (model.kind !== "Model") continue;
+    claimed.add(model);
 
     const tableMeta = meta as TableMeta;
     const pkMeta = pkTableState.get(model) as PrimaryKeyMeta | undefined;
@@ -186,12 +177,9 @@ export function buildIR(program: ProgramStateAccess): {
         field.visibility = vis as "read";
       }
 
-      // Default value from TypeSpec (prop.default)
-      if ("default" in modelProp && modelProp.default !== undefined) {
-        const defaultVal = extractDefaultValue(modelProp.default as unknown);
-        if (defaultVal !== undefined) {
-          field.defaultValue = defaultVal;
-        }
+      const defaultVal = readDefaultValue(modelProp);
+      if (defaultVal !== undefined) {
+        field.defaultValue = defaultVal;
       }
 
       fields.push(field);
@@ -206,13 +194,7 @@ export function buildIR(program: ProgramStateAccess): {
       columns: toModelProperties(cu.columns).map((c) => c.name),
     }));
 
-    // Indexes
-    const indexDefs = indexDefState.get(model) as IndexMeta[] | undefined;
-    const indexes: IndexDef[] = (indexDefs ?? []).map((idx) => ({
-      name: idx.name,
-      columns: toModelProperties(idx.columns).map((c) => c.name),
-      unique: idx.unique,
-    }));
+    const indexes: IndexDef[] = readIndexDefs(program, model);
 
     // Composite foreign keys
     const fkDefs = foreignKeyDefState.get(model) as ForeignKeyMeta[] | undefined;
@@ -245,22 +227,9 @@ export function buildIR(program: ProgramStateAccess): {
     });
   }
 
-  return { tables, enums };
-}
+  reportUnclaimedIndexDefs(program, claimed);
 
-/**
- * Normalizes a `ModelProperty[]` decorator argument.
- *
- * Passed as a plain array when a decorator is invoked directly (unit tests), and
- * as a marshalled tuple value (`{ values: ModelProperty[] }`) when the emitter
- * runs against compiled TypeSpec.
- */
-function toModelProperties(columns: unknown): ModelProperty[] {
-  if (Array.isArray(columns)) return columns as ModelProperty[];
-  if (columns && typeof columns === "object" && "values" in columns) {
-    return (columns as { values: ModelProperty[] }).values;
-  }
-  throw new Error("Expected a ModelProperty[] or tuple value for decorator columns");
+  return { tables, enums };
 }
 
 function resolveFieldType(
@@ -328,27 +297,4 @@ function resolveScalarType(scalar: Scalar, program: ProgramStateAccess): FieldTy
   }
 
   return { kind: "text" };
-}
-
-function extractDefaultValue(value: unknown): unknown {
-  if (value === null || value === undefined) return undefined;
-
-  // TypeSpec numeric/string/boolean literal values
-  if (typeof value === "object" && value !== null && "value" in value) {
-    return (value as { value: unknown }).value;
-  }
-
-  // Enum member default — extract the value or name
-  if (typeof value === "object" && value !== null && "kind" in value) {
-    const typed = value as { kind: string; value?: unknown; name?: string };
-    if (typed.kind === "EnumMember") {
-      return typed.value !== undefined ? typed.value : typed.name;
-    }
-  }
-
-  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
-    return value;
-  }
-
-  return undefined;
 }

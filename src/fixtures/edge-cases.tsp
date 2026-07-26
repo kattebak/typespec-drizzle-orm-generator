@@ -1,5 +1,7 @@
 import "@kattebak/typespec-drizzle-orm-generator";
 
+using Drizzle;
+
 namespace EdgeCases;
 
 enum OrderStatus {
@@ -42,8 +44,10 @@ model Order {
 
   status: OrderStatus;
 
-  @global.minValue(1)
-  @global.maxValue(5)
+  // Qualified because the TypeSpec standard library declares these names too,
+  // so `using Drizzle` alone leaves them ambiguous.
+  @Drizzle.minValue(1)
+  @Drizzle.maxValue(5)
   rating?: int32;
 
   @check("total_cents > 0")
@@ -86,6 +90,20 @@ model OrderLine {
   @uuid("base36")
   @references(Product.productId)
   productId?: string;
+}
+
+@table("Preference", "edge")
+@primaryKey("preferences")
+model Preference {
+  @pk
+  @uuid("base36", true)
+  preferenceId: string;
+
+  status: OrderStatus = OrderStatus.pending;
+  separator: string = "\\t\"quoted\"";
+  retries: int32 = 0;
+  notify: boolean = true;
+  tags: string[] = #[];
 }
 
 @table("Tag", "edge")

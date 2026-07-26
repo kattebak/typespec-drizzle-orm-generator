@@ -12,6 +12,11 @@ describe("stringifyObject", () => {
     assert.ok(result.includes('"hello"'));
   });
 
+  it("escapes quotes and backslashes in string values", () => {
+    const result = stringifyObject({ flag: '\\Seen "quoted"' });
+    assert.equal(result, '{\n  flag: "\\\\Seen \\"quoted\\""\n}');
+  });
+
   it("serializes number values", () => {
     const result = stringifyObject({ count: 42 });
     assert.ok(result.includes("42"));

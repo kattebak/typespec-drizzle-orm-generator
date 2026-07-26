@@ -5,6 +5,7 @@ import { mkdir, readFile, rm } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { describe, it } from "node:test";
 import { fileURLToPath } from "node:url";
+import { parse } from "@babel/parser";
 
 type Dialect = "pg" | "sqlite";
 
@@ -71,6 +72,18 @@ async function compileAndInstall(dialect: Dialect): Promise<void> {
   } else {
     assert.ok(schema.includes('from "drizzle-orm/sqlite-core"'));
   }
+
+  // A column default is emitted as a JS literal, so a mis-escaped string or an
+  // array rendered with String() breaks the whole module rather than one column.
+  parse(schema, { sourceType: "module", plugins: ["typescript"] });
+
+  assert.match(schema, /status: .*\.default\("pending"\)/);
+  assert.match(schema, /separator: .*\.default\("\\\\t\\"quoted\\""\)/);
+  assert.match(schema, /retries: .*\.default\(0\)/);
+  assert.match(schema, /notify: .*\.default\(true\)/);
+  assert.match(schema, /tags: .*\.default\(\[\]\)/);
+  assert.match(schema, /index\("idx_orders_account_created"\)/);
+  assert.match(schema, /uniqueIndex\("idx_products_sku"\)/);
 
   execFileSync("npm", ["install", "--ignore-scripts"], {
     cwd: outputDir,

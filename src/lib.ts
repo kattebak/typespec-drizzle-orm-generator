@@ -1,8 +1,21 @@
-import { createTypeSpecLibrary } from "@typespec/compiler";
+import { createTypeSpecLibrary, paramMessage } from "@typespec/compiler";
 
 export const $lib = createTypeSpecLibrary({
   name: "@kattebak/typespec-drizzle-orm-generator",
-  diagnostics: {},
+  diagnostics: {
+    "index-def-dropped": {
+      severity: "error",
+      messages: {
+        default: paramMessage`@indexDef "${"index"}" is declared on model ${"model"}, which this front-end generates no table for. Mark the model with @table (drizzle front-end) or @entity (remit front-end), or remove the index.`,
+      },
+    },
+    "index-def-unknown-column": {
+      severity: "error",
+      messages: {
+        default: paramMessage`@indexDef "${"index"}" references column "${"column"}", which is not a property of model ${"model"}.`,
+      },
+    },
+  },
   state: {
     table: { description: "State for @table decorator" },
     primaryKey: { description: "State for @primaryKey decorator" },
@@ -15,8 +28,8 @@ export const $lib = createTypeSpecLibrary({
     unique: { description: "State for @unique decorator (single column)" },
     compositeUnique: { description: "State for @unique({ name, columns }) (model-level)" },
     check: { description: "State for @check decorator" },
-    indexDef: { description: "State for @index decorator" },
-    foreignKeyDef: { description: "State for @foreignKey decorator" },
+    indexDef: { description: "State for @indexDef decorator" },
+    foreignKeyDef: { description: "State for @foreignKeyDef decorator" },
     minValue: { description: "State for @minValue decorator" },
     maxValue: { description: "State for @maxValue decorator" },
     columnVisibility: { description: "State for @columnVisibility decorator" },

@@ -10,6 +10,8 @@ import type {
 } from "@typespec/compiler";
 import { navigateProgram } from "@typespec/compiler";
 import { toSnakeCase } from "../generators/naming.js";
+import { readDefaultValue } from "./default-value.js";
+import { readIndexDefs, reportUnclaimedIndexDefs } from "./index-def.js";
 import type {
   EnumDef,
   FieldDef,
@@ -30,6 +32,9 @@ import type {
  * Decorators are read by name off `Type.decorators` (`DecoratorApplication.definition.name`)
  * rather than by importing the electrodb emitter's private state-key symbols — the
  * decorator surface is the stable contract; the state keys are an implementation detail.
+ *
+ * Indexes come from two places. `@index` access patterns become secondary indexes, and
+ * `@indexDef` adds indexes that exist in SQL only — see `readIndexDefs`.
  *
  * Relations are derived from ElectroDB collections: a `collection` shared by ≥2 entities
  * on indexes that share the same pk-attribute NAME means that named attribute is the
@@ -66,6 +71,7 @@ export function buildRemitIR(
   const idDefault = options.idDefault ?? false;
   const tables: TableDef[] = [];
   const enums: EnumDef[] = [];
+  const claimed = new Set<Model>();
 
   const models: Model[] = [];
   navigateProgram(program, {
@@ -79,6 +85,7 @@ export function buildRemitIR(
   for (const model of models) {
     const entityDec = firstDecorator(model, "@entity");
     if (!entityDec) continue;
+    claimed.add(model);
 
     const entityName = stringArg(entityDec, 0) ?? lowerFirst(model.name);
     const service = stringArg(entityDec, 1) ?? "remit";
@@ -114,7 +121,7 @@ export function buildRemitIR(
         field.autoGenerateId = true;
       }
 
-      const defaultValue = extractDefaultValue(prop);
+      const defaultValue = readDefaultValue(prop);
       if (defaultValue !== undefined) field.defaultValue = defaultValue;
 
       fields.push(field);
@@ -131,6 +138,8 @@ export function buildRemitIR(
         unique: false,
       }))
       .filter((idx) => !sameColumns(idx.columns));
+
+    indexes.push(...readIndexDefs(program, model));
 
     for (const pattern of patterns) {
       if (!pattern.collection) continue;
@@ -159,6 +168,8 @@ export function buildRemitIR(
   }
 
   if (foreignKeys) applyCollectionForeignKeys(tables, collections);
+
+  reportUnclaimedIndexDefs(program, claimed);
 
   return { tables, enums };
 }
@@ -340,31 +351,6 @@ function resolveScalarType(scalar: Scalar): FieldType {
   if (scalar.baseScalar) return resolveScalarType(scalar.baseScalar);
 
   return { kind: "text" };
-}
-
-function extractDefaultValue(prop: ModelProperty): unknown {
-  const value =
-    (prop as { defaultValue?: unknown }).defaultValue ?? (prop as { default?: unknown }).default;
-  if (value === null || value === undefined) return undefined;
-
-  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
-    return value;
-  }
-
-  if (typeof value === "object" && value !== null) {
-    const typed = value as { valueKind?: string; value?: unknown; kind?: string; name?: string };
-    if ("value" in typed && typed.value !== undefined) {
-      const inner = typed.value;
-      if (typeof inner === "string" || typeof inner === "number" || typeof inner === "boolean") {
-        return inner;
-      }
-    }
-    if (typed.kind === "EnumMember") {
-      return typed.value !== undefined ? typed.value : typed.name;
-    }
-  }
-
-  return undefined;
 }
 
 function isModel(value: unknown): value is Model {

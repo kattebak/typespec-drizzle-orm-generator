@@ -1,5 +1,5 @@
 import { type ChainMethod, chainCall, objectLiteral, quoted } from "../codegen/index.js";
-import type { FieldDef, TableDef } from "../ir/types.js";
+import type { DefaultValue, FieldDef, TableDef } from "../ir/types.js";
 import type { DialectConfig } from "./dialect.js";
 import { toTableVariableName } from "./naming.js";
 
@@ -55,9 +55,15 @@ function isPrimaryKey(field: FieldDef, table: TableDef): boolean {
   return !table.primaryKey.isComposite && table.primaryKey.columns.includes(field.name);
 }
 
-function mapDefault(value: unknown): string {
+function mapDefault(value: DefaultValue): string {
   if (typeof value === "string") {
     return quoted(value);
+  }
+  // Drizzle takes a JSON column's default as the JS value it serializes, so an
+  // array default has to survive as a literal. `String([])` renders the empty
+  // string, which is not valid JS in that position.
+  if (Array.isArray(value)) {
+    return JSON.stringify(value);
   }
   return String(value);
 }

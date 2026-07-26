@@ -15,7 +15,7 @@ npm install @kattebak/typespec-drizzle-orm-generator
 ```typespec
 import "@kattebak/typespec-drizzle-orm-generator";
 
-using DrizzleEmitter;
+using Drizzle;
 
 @entity("Author", "bookstore")
 @primaryKey("authors")
@@ -202,6 +202,24 @@ export const describeAuthor = (
 
 ## Decorators
 
+Decorators live in the `Drizzle` namespace. Reference them qualified
+(`@Drizzle.table`) or bring them into scope for a file with `using Drizzle;`.
+
+`@minValue`, `@maxValue`, `@createdAt` and `@updatedAt` are names the TypeSpec
+standard library and other emitters also declare. In a project that loads one of
+those alongside this library, `using Drizzle;` leaves those four references
+ambiguous — qualify them:
+
+```typespec
+using Drizzle;
+
+model Order {
+  @Drizzle.minValue(1)
+  @Drizzle.maxValue(5)
+  rating?: int32;
+}
+```
+
 ### Defining entities
 
 ```typespec
@@ -320,9 +338,36 @@ Set `frontend` in your `tspconfig.yaml` to choose which TypeSpec vocabulary the 
 The `remit` front-end maps an ElectroDB model to a table:
 
 - **Primary key** is the entity's own identity field, `<entity>Id`, as a single column. The ElectroDB primary index is a DynamoDB access pattern, not the entity's identity, so it becomes an ordinary secondary index. An entity with no `<entity>Id` field keeps the ElectroDB primary composite as its key.
-- Every `@index` becomes a named secondary index.
+- Every `@index` becomes a named secondary index, and every `@indexDef` adds an index that exists in SQL only (see below).
 - **Enums** are text columns narrowed by a `$type` union, not pgEnums — a store that mirrors a DynamoDB port keeps enum values as strings and avoids an `ALTER TYPE` per new value.
 - A `collection` shared by two or more entities becomes an `ON DELETE CASCADE` foreign key from each member to the entity that owns the shared partition key (unless `foreign-keys: false`).
+
+### SQL-only indexes
+
+`@indexDef` declares an index this generator emits and no one else reads. It is
+the tool for an index the SQL schema needs but the DynamoDB table must not get:
+`@index` is the ElectroDB vocabulary, so an `@index` added for a SQL predicate
+also mints a DynamoDB secondary index — write amplification on every write, and
+against a hard limit of five local secondary indexes per table.
+
+```typespec
+@entity("threadMessage", "remit")
+@index("ThreadMessage", { pk: [ThreadMessage.accountConfigId], sk: [ThreadMessage.threadMessageId] })
+@Drizzle.indexDef(
+  "tm_by_mailbox_category_date",
+  [
+    ThreadMessage.accountConfigId,
+    ThreadMessage.mailboxId,
+    ThreadMessage.category,
+    ThreadMessage.sentDate
+  ]
+)
+model ThreadMessage { ... }
+```
+
+Both front-ends emit it, and the name is used verbatim, so it is the name your
+migration history is keyed on. An `@indexDef` on a model the selected front-end
+generates no table for is a compile error, not a dropped index.
 
 ```yaml
 options:

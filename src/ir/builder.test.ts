@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import type { DecoratorContext, Model, ModelProperty } from "@typespec/compiler";
+import type { DecoratorContext, Diagnostic, Model, ModelProperty } from "@typespec/compiler";
 import { Numeric } from "@typespec/compiler";
 import { assemblePackage } from "../assembler.ts";
 import {
@@ -26,14 +26,13 @@ import { buildIR, type ProgramStateAccess } from "./builder.ts";
 /**
  * Creates a mock TypeSpec Program with state management.
  */
-function createMockProgram(): ProgramStateAccess & {
-  stateMap(key: symbol): Map<unknown, unknown>;
-  stateSet(key: symbol): Set<unknown>;
-} {
+function createMockProgram(): ProgramStateAccess & { diagnostics: Diagnostic[] } {
   const maps = new Map<symbol, Map<unknown, unknown>>();
   const sets = new Map<symbol, Set<unknown>>();
+  const diagnostics: Diagnostic[] = [];
 
   return {
+    diagnostics,
     stateMap(key: symbol) {
       let map = maps.get(key);
       if (!map) {
@@ -49,6 +48,9 @@ function createMockProgram(): ProgramStateAccess & {
         sets.set(key, set);
       }
       return set;
+    },
+    reportDiagnostic(diagnostic: Diagnostic) {
+      diagnostics.push(diagnostic);
     },
   };
 }

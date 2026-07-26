@@ -1,3 +1,15 @@
+import type { Diagnostic } from "@typespec/compiler";
+
+/**
+ * Minimal Program surface the IR builders use: decorator state plus a place to
+ * raise diagnostics. Narrow enough that a mock program can drive them in tests.
+ */
+export interface ProgramStateAccess {
+  stateMap(key: symbol): Map<unknown, unknown>;
+  stateSet(key: symbol): Set<unknown>;
+  reportDiagnostic(diagnostic: Diagnostic): void;
+}
+
 /** UUID encoding options for @uuid decorator */
 export type UuidEncoding = "base36" | "canonical" | "raw";
 
@@ -15,6 +27,9 @@ export type FieldType =
   | { kind: "uuid"; encoding: UuidEncoding }
   | { kind: "enum"; enumName: string; values: string[] }
   | { kind: "textEnum"; values: string[] };
+
+/** Literal a column default is emitted from */
+export type DefaultValue = string | number | bigint | boolean | readonly DefaultValue[];
 
 /** ON DELETE / ON UPDATE referential action for a foreign key */
 export type ReferentialAction = "cascade" | "restrict" | "no action" | "set null" | "set default";
@@ -43,7 +58,7 @@ export interface FieldDef {
   createdAt: boolean;
   updatedAt: boolean;
   visibility?: "read";
-  defaultValue?: unknown;
+  defaultValue?: DefaultValue;
   constraints?: {
     minValue?: number;
     maxValue?: number;
