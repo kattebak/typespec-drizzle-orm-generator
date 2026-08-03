@@ -87,11 +87,11 @@ describe("package assembly", () => {
     assert.equal(pkg.scripts.prepare, "tsc");
   });
 
-  it("package.json includes short-uuid dependency and drizzle-orm peerDependency", () => {
+  it("package.json declares no runtime dependencies and a drizzle-orm peerDependency", () => {
     const content = files.get("package.json");
     assert.ok(content);
     const pkg = JSON.parse(content);
-    assert.ok(pkg.dependencies["short-uuid"]);
+    assert.equal(pkg.dependencies, undefined);
     assert.equal(pkg.peerDependencies["drizzle-orm"], ">=1.0.0-beta.1");
     assert.equal(pkg.peerDependencies.typescript, ">=5.0.0");
   });

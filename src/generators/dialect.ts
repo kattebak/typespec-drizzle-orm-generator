@@ -28,7 +28,6 @@ export interface DialectConfig {
   tableFn: string;
   enumFn: string | null;
   uuidTypes: readonly UuidTypeDef[];
-  uuidHelpers: readonly string[];
   nullableWrappers: readonly NullableWrapperDef[];
   mapFieldType(field: FieldDef): string;
   mapNullableFieldType(field: FieldDef): string;
@@ -47,33 +46,9 @@ export function uuidTypeName(encoding: UuidEncoding): string {
   return uuidTypeNames[encoding];
 }
 
-const uuidToBytesHelper = [
-  "function uuidToBytes(uuid: string): Uint8Array {",
-  '  const hex = uuid.replace(/-/g, "");',
-  "  const bytes = new Uint8Array(16);",
-  "  for (let i = 0; i < 16; i += 1) {",
-  "    bytes[i] = Number.parseInt(hex.slice(i * 2, i * 2 + 2), 16);",
-  "  }",
-  "  return bytes;",
-  "}",
-].join("\n");
-
-const bytesToUuidHelper = [
-  "function bytesToUuid(bytes: Uint8Array): string {",
-  '  const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");',
-  "  return [",
-  "    hex.slice(0, 8),",
-  "    hex.slice(8, 12),",
-  "    hex.slice(12, 16),",
-  "    hex.slice(16, 20),",
-  "    hex.slice(20, 32),",
-  '  ].join("-");',
-  "}",
-].join("\n");
-
 const canonicalDrivers = {
-  toDriver: "(value: string): string => translator.toUUID(value)",
-  fromDriver: "(value: string): string => translator.fromUUID(value)",
+  toDriver: "(value: string): string => bytesToUuid(base36ToBytes(value))",
+  fromDriver: "(value: string): string => bytesToBase36(uuidToBytes(value))",
 } as const;
 
 export function resolveDialect(dialect: Dialect): DialectConfig {
@@ -146,7 +121,6 @@ function pgDialect(): DialectConfig {
     tableFn: "pgTable",
     enumFn: "pgEnum",
     uuidTypes: pgUuidTypes,
-    uuidHelpers: [],
     nullableWrappers: pgNullableWrappers,
     mapTimestampDefault: () => ({ method: "defaultNow" }),
     nullableWrapperName(kind: FieldType["kind"]): string | null {
@@ -237,8 +211,8 @@ const sqliteUuidTypes: readonly UuidTypeDef[] = [
     dataType: "blob",
     driverType: "Uint8Array",
     doc: "UUID column stored as a 16-byte blob, reads/writes as base36",
-    toDriver: "(value: string): Uint8Array => uuidToBytes(translator.toUUID(value))",
-    fromDriver: "(value: Uint8Array): string => translator.fromUUID(bytesToUuid(value))",
+    toDriver: "(value: string): Uint8Array => base36ToBytes(value)",
+    fromDriver: "(value: Uint8Array): string => bytesToBase36(value)",
   },
 ];
 
@@ -249,7 +223,6 @@ function sqliteDialect(): DialectConfig {
     tableFn: "sqliteTable",
     enumFn: null,
     uuidTypes: sqliteUuidTypes,
-    uuidHelpers: [uuidToBytesHelper, bytesToUuidHelper],
     nullableWrappers: sqliteNullableWrappers,
     mapTimestampDefault: () => ({ method: "$defaultFn", args: ["() => new Date()"] }),
     nullableWrapperName(kind: FieldType["kind"]): string | null {
