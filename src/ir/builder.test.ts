@@ -1343,3 +1343,90 @@ describe("toModelProperties input validation", () => {
     assert.throws(() => buildIR(program), /Expected a ModelProperty\[\] or tuple value/);
   });
 });
+
+describe("@uuid encoding resolution", () => {
+  function buildUuidField(configure: (ctx: DecoratorContext, prop: MockProp) => void) {
+    const program = createMockProgram();
+    const ctx = mockContext(program);
+    const model: MockModel = { kind: "Model", name: "Row", properties: new Map() };
+    const rowId: MockProp = {
+      kind: "ModelProperty",
+      name: "rowId",
+      type: mockScalar("string"),
+      optional: false,
+      model,
+    };
+    model.properties.set("rowId", rowId);
+    $table(ctx, model as unknown as Model, "Row", "test");
+    $primaryKey(ctx, model as unknown as Model, "rows");
+    $pk(ctx, rowId as unknown as ModelProperty);
+    configure(ctx, rowId);
+
+    const { tables } = buildIR(program);
+    const field = tables.find((t) => t.name === "Row")?.fields.find((f) => f.name === "rowId");
+    assert.ok(field);
+    return { field, diagnostics: program.diagnostics };
+  }
+
+  for (const encoding of ["base36", "canonical", "raw"] as const) {
+    it(`carries the ${encoding} encoding into the field type`, () => {
+      const { field, diagnostics } = buildUuidField((ctx, prop) => {
+        $uuid(ctx, prop as unknown as ModelProperty, encoding);
+      });
+      assert.deepEqual(field.type, { kind: "uuid", encoding });
+      assert.deepEqual(field.uuid, { encoding, autoGenerate: false });
+      assert.equal(diagnostics.length, 0);
+    });
+  }
+
+  it("defaults to canonical when the decorator names no encoding", () => {
+    const { field, diagnostics } = buildUuidField((ctx, prop) => {
+      $uuid(ctx, prop as unknown as ModelProperty);
+    });
+    assert.deepEqual(field.type, { kind: "uuid", encoding: "canonical" });
+    assert.equal(diagnostics.length, 0);
+  });
+
+  it("reports an unknown encoding and falls back to canonical", () => {
+    const { field, diagnostics } = buildUuidField((ctx, prop) => {
+      $uuid(ctx, prop as unknown as ModelProperty, "base62");
+    });
+    assert.deepEqual(field.type, { kind: "uuid", encoding: "canonical" });
+    assert.equal(diagnostics.length, 1);
+    assert.equal(
+      diagnostics[0].code,
+      "@kattebak/typespec-drizzle-orm-generator/unknown-uuid-encoding",
+    );
+  });
+});
+
+describe("resolution: bytes scalar", () => {
+  it("resolves a bytes property to blob", () => {
+    const program = createMockProgram();
+    const ctx = mockContext(program);
+    const model: MockModel = { kind: "Model", name: "Row", properties: new Map() };
+    const rowId: MockProp = {
+      kind: "ModelProperty",
+      name: "rowId",
+      type: mockScalar("string"),
+      optional: false,
+      model,
+    };
+    const payload: MockProp = {
+      kind: "ModelProperty",
+      name: "payload",
+      type: mockScalar("bytes"),
+      optional: false,
+      model,
+    };
+    model.properties.set("rowId", rowId);
+    model.properties.set("payload", payload);
+    $table(ctx, model as unknown as Model, "Row", "test");
+    $primaryKey(ctx, model as unknown as Model, "rows");
+    $pk(ctx, rowId as unknown as ModelProperty);
+
+    const { tables } = buildIR(program);
+    const field = tables.find((t) => t.name === "Row")?.fields.find((f) => f.name === "payload");
+    assert.deepEqual(field?.type, { kind: "blob" });
+  });
+});

@@ -140,3 +140,6 @@ vite.config.ts.timestamp-*
 
 # Smoke test package outputs
 .smoke-output/
+
+# Generated packages built by the round-trip tests
+.tmp/

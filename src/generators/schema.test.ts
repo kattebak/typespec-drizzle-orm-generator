@@ -965,3 +965,70 @@ describe("schema generator (pluralize: false)", () => {
     assert.ok(!output.includes("export const genres "));
   });
 });
+
+describe("schema generator: uuid encodings and blob columns", () => {
+  const table: TableDef = {
+    name: "Token",
+    service: "auth",
+    tableName: "tokens",
+    primaryKey: { tableName: "tokens", columns: ["tokenId"], isComposite: false },
+    fields: [
+      {
+        name: "tokenId",
+        columnName: "token_id",
+        type: { kind: "uuid", encoding: "raw" },
+        uuid: { encoding: "raw", autoGenerate: true },
+        nullable: false,
+        createdAt: false,
+        updatedAt: false,
+      },
+      {
+        name: "sessionId",
+        columnName: "session_id",
+        type: { kind: "uuid", encoding: "base36" },
+        uuid: { encoding: "base36", autoGenerate: false },
+        nullable: false,
+        createdAt: false,
+        updatedAt: false,
+      },
+      {
+        name: "payload",
+        columnName: "payload",
+        type: { kind: "blob" },
+        nullable: false,
+        createdAt: false,
+        updatedAt: false,
+      },
+    ],
+    foreignKeys: [],
+    isJunction: false,
+    indexes: [],
+    uniqueConstraints: [],
+  };
+
+  const emptyEnums: EnumDef[] = [];
+
+  it("imports only the uuid custom types the columns use", () => {
+    const output = generateSchema([table], emptyEnums, sqlite);
+    assert.ok(
+      output.includes('import { base36Uuid, generateBase36Id, rawUuid } from "./types.js";'),
+    );
+    assert.ok(!output.includes("canonicalUuid"));
+  });
+
+  it("imports blob from sqlite-core and bytea from pg-core", () => {
+    assert.ok(generateSchema([table], emptyEnums, sqlite).includes("blob"));
+    assert.ok(generateSchema([table], emptyEnums, pg).includes("bytea"));
+  });
+
+  it("declares each uuid column with the custom type its encoding names", () => {
+    const output = generateSchema([table], emptyEnums, pg);
+    assert.ok(
+      output.includes(
+        'tokenId: rawUuid("token_id").primaryKey().$defaultFn(() => generateBase36Id()),',
+      ),
+    );
+    assert.ok(output.includes('sessionId: base36Uuid("session_id").notNull(),'));
+    assert.ok(output.includes('payload: bytea("payload").notNull(),'));
+  });
+});

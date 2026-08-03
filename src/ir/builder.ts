@@ -1,7 +1,7 @@
 import type { Model, ModelProperty, Program, Scalar } from "@typespec/compiler";
 import { getMaxLength } from "@typespec/compiler";
 import { toSnakeCase } from "../generators/naming.js";
-import { StateKeys } from "../lib.js";
+import { $lib, StateKeys } from "../lib.js";
 import { readDefaultValue } from "./default-value.js";
 import { readIndexDefs, reportUnclaimedIndexDefs, toModelProperties } from "./index-def.js";
 import type {
@@ -15,6 +15,7 @@ import type {
   UniqueConstraintDef,
   UuidEncoding,
 } from "./types.js";
+import { DEFAULT_UUID_ENCODING, isUuidEncoding } from "./types.js";
 
 export type { ProgramStateAccess } from "./types.js";
 
@@ -28,8 +29,26 @@ interface PrimaryKeyMeta {
 }
 
 interface UuidMeta {
-  encoding: string;
+  encoding?: string;
   autoGenerate: boolean;
+}
+
+function resolveUuidEncoding(
+  meta: UuidMeta,
+  prop: ModelProperty,
+  program: ProgramStateAccess,
+): UuidEncoding {
+  if (meta.encoding === undefined) return DEFAULT_UUID_ENCODING;
+  if (isUuidEncoding(meta.encoding)) return meta.encoding;
+
+  program.reportDiagnostic(
+    $lib.createDiagnostic({
+      code: "unknown-uuid-encoding",
+      target: prop,
+      format: { encoding: meta.encoding },
+    }),
+  );
+  return DEFAULT_UUID_ENCODING;
 }
 
 interface CompositeUniqueMeta {
@@ -140,9 +159,9 @@ export function buildIR(program: ProgramStateAccess): {
         updatedAt: isUpdatedAt,
       };
 
-      if (uuidMeta) {
+      if (uuidMeta && fieldType.kind === "uuid") {
         field.uuid = {
-          encoding: uuidMeta.encoding as UuidEncoding,
+          encoding: fieldType.encoding,
           autoGenerate: uuidMeta.autoGenerate,
         };
       }
@@ -238,7 +257,7 @@ function resolveFieldType(
   program: ProgramStateAccess,
 ): FieldType {
   if (uuidMeta) {
-    return { kind: "uuid", encoding: uuidMeta.encoding as UuidEncoding };
+    return { kind: "uuid", encoding: resolveUuidEncoding(uuidMeta, prop, program) };
   }
 
   const type = prop.type;
@@ -286,6 +305,8 @@ function resolveScalarType(scalar: Scalar, program: ProgramStateAccess): FieldTy
       return { kind: "boolean" };
     case "utcDateTime":
       return { kind: "timestamp" };
+    case "bytes":
+      return { kind: "blob" };
   }
 
   if (maxLength !== undefined) {

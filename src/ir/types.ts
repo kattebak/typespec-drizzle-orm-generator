@@ -13,6 +13,13 @@ export interface ProgramStateAccess {
 /** UUID encoding options for @uuid decorator */
 export type UuidEncoding = "base36" | "canonical" | "raw";
 
+/** Storage encoding a `@uuid` column uses when the decorator names none */
+export const DEFAULT_UUID_ENCODING: UuidEncoding = "canonical";
+
+export function isUuidEncoding(value: unknown): value is UuidEncoding {
+  return value === "base36" || value === "canonical" || value === "raw";
+}
+
 /** Resolved column type after applying all decorators */
 export type FieldType =
   | { kind: "text" }
@@ -24,6 +31,7 @@ export type FieldType =
   | { kind: "boolean" }
   | { kind: "timestamp" }
   | { kind: "jsonb" }
+  | { kind: "blob" }
   | { kind: "uuid"; encoding: UuidEncoding }
   | { kind: "enum"; enumName: string; values: string[] }
   | { kind: "textEnum"; values: string[] };

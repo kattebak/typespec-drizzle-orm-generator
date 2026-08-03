@@ -34,7 +34,7 @@ export function $junction(context: DecoratorContext, target: Model): void {
 export function $uuid(
   context: DecoratorContext,
   target: ModelProperty,
-  encoding: string,
+  encoding?: string,
   autoGenerate?: boolean,
 ): void {
   context.program.stateMap(StateKeys.uuid).set(target, {

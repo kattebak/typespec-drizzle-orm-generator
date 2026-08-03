@@ -11,6 +11,7 @@ import {
 import type { EnumDef, FieldDef, TableDef } from "../ir/types.js";
 import { mapFieldToColumn } from "./column-mapper.js";
 import type { DialectConfig } from "./dialect.js";
+import { uuidTypeName } from "./dialect.js";
 import { toTableVariableName } from "./naming.js";
 
 export function generateSchema(
@@ -133,6 +134,8 @@ function collectFieldImports(field: FieldDef, dialect: DialectConfig): string[] 
       case "real":
       case "doublePrecision":
         return ["real"];
+      case "blob":
+        return ["blob"];
       case "uuid":
         return [];
     }
@@ -157,6 +160,8 @@ function collectFieldImports(field: FieldDef, dialect: DialectConfig): string[] 
       return ["timestamp"];
     case "jsonb":
       return ["jsonb"];
+    case "blob":
+      return ["bytea"];
     case "textEnum":
       return ["text"];
     case "uuid":
@@ -180,7 +185,7 @@ function collectTypesImports(tables: TableDef[], dialect: DialectConfig): string
   for (const table of tables) {
     for (const field of table.fields) {
       if (field.uuid) {
-        imports.add("base36Uuid");
+        imports.add(uuidTypeName(field.uuid.encoding));
         if (field.uuid.autoGenerate) {
           imports.add("generateBase36Id");
         }
