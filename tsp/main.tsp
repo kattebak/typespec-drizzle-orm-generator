@@ -22,7 +22,17 @@ extern dec references(
   onDelete?: valueof "CASCADE" | "RESTRICT"
 );
 extern dec junction(target: Model);
-extern dec uuid(target: ModelProperty, encoding: valueof string, autoGenerate?: valueof boolean);
+/**
+ * Marks a column as a UUID the application reads and writes as a 25-character
+ * base36 string. `encoding` picks the stored form: `canonical` (the default,
+ * 36-character hyphenated), `base36` (the 25-character string as written), or
+ * `raw` (16 bytes).
+ */
+extern dec uuid(
+  target: ModelProperty,
+  encoding?: valueof "base36" | "canonical" | "raw",
+  autoGenerate?: valueof boolean
+);
 extern dec createdAt(target: ModelProperty);
 extern dec updatedAt(target: ModelProperty);
 extern dec unique(target: ModelProperty);

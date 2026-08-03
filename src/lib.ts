@@ -9,6 +9,12 @@ export const $lib = createTypeSpecLibrary({
         default: paramMessage`@indexDef "${"index"}" is declared on model ${"model"}, which this front-end generates no table for. Mark the model with @table (drizzle front-end) or @entity (remit front-end), or remove the index.`,
       },
     },
+    "unknown-uuid-encoding": {
+      severity: "error",
+      messages: {
+        default: paramMessage`@uuid encoding "${"encoding"}" is not one of "base36", "canonical" or "raw". The column falls back to "canonical".`,
+      },
+    },
     "index-def-unknown-column": {
       severity: "error",
       messages: {

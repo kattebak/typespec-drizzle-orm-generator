@@ -1,5 +1,5 @@
 import { exportConst, fnCall, importDecl, quoted } from "../codegen/index.js";
-import type { DialectConfig, NullableWrapperDef } from "./dialect.js";
+import type { DialectConfig, NullableWrapperDef, UuidTypeDef } from "./dialect.js";
 
 export function generateTypes(dialect: DialectConfig, schemaOnly = false): string {
   const sections: string[] = [];
@@ -12,21 +12,15 @@ export function generateTypes(dialect: DialectConfig, schemaOnly = false): strin
   sections.push(`const translator = ${fnCall("short", ["short.constants.uuid25Base36"])};`);
   sections.push("");
 
-  const comment =
-    dialect.dialect === "sqlite"
-      ? "/** UUID column stored as text, reads/writes as base36 */"
-      : "/** UUID column that stores as native pg uuid, reads/writes as base36 */";
-  sections.push(comment);
-  const typeParam = "<{\n  data: string;\n  driverData: string;\n}>";
-  const configObj = [
-    "{",
-    `  dataType: () => ${quoted(dialect.uuidDataType)},`,
-    "  toDriver: (value: string): string => translator.toUUID(value),",
-    "  fromDriver: (value: string): string => translator.fromUUID(value),",
-    "}",
-  ].join("\n");
-  sections.push(exportConst("base36Uuid", `customType${typeParam}(${configObj})`));
-  sections.push("");
+  for (const helper of dialect.uuidHelpers) {
+    sections.push(helper);
+    sections.push("");
+  }
+
+  for (const uuidType of dialect.uuidTypes) {
+    sections.push(generateUuidType(uuidType));
+    sections.push("");
+  }
 
   sections.push("export function generateBase36Id(): string {");
   sections.push("  return translator.new();");
@@ -58,6 +52,16 @@ function drizzleClientImports(dialect: DialectConfig): string[] {
     importDecl(["PgAsyncDatabase", "PgQueryResultHKT"], "drizzle-orm/pg-core", { type: true }),
     importDecl(["relations"], "./relations.js", { type: true }),
   ];
+}
+
+function generateUuidType(uuidType: UuidTypeDef): string {
+  const typeParam = `<{\n  data: string;\n  driverData: ${uuidType.driverType};\n}>`;
+  const config = ["{", `  dataType: () => ${quoted(uuidType.dataType)},`];
+  if (uuidType.toDriver) config.push(`  toDriver: ${uuidType.toDriver},`);
+  if (uuidType.fromDriver) config.push(`  fromDriver: ${uuidType.fromDriver},`);
+  config.push("}");
+  const declaration = exportConst(uuidType.name, `customType${typeParam}(${config.join("\n")})`);
+  return `/** ${uuidType.doc} */\n${declaration}`;
 }
 
 function generateNullableWrapper(wrapper: NullableWrapperDef): string {

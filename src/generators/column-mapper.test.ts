@@ -510,3 +510,52 @@ describe("column mapper (sqlite)", () => {
     );
   });
 });
+
+describe("uuid encodings and blob columns", () => {
+  const sqliteDialect = resolveDialect("sqlite");
+
+  const columnByEncoding = {
+    base36: "base36Uuid",
+    canonical: "canonicalUuid",
+    raw: "rawUuid",
+  } as const;
+
+  for (const [encoding, expected] of Object.entries(columnByEncoding)) {
+    it(`builds a ${encoding} uuid column from ${expected} on both dialects`, () => {
+      const field = makeField({
+        name: "tokenId",
+        columnName: "token_id",
+        type: { kind: "uuid", encoding: encoding as keyof typeof columnByEncoding },
+        uuid: { encoding: encoding as keyof typeof columnByEncoding, autoGenerate: false },
+      });
+      const table = makeTable(["other"]);
+      assert.equal(mapFieldToColumn(field, table, pg), `${expected}("token_id").notNull()`);
+      assert.equal(
+        mapFieldToColumn(field, table, sqliteDialect),
+        `${expected}("token_id").notNull()`,
+      );
+    });
+  }
+
+  it("maps a blob field to bytea on PG and a buffer blob on SQLite", () => {
+    const field = makeField({ name: "payload", columnName: "payload", type: { kind: "blob" } });
+    const table = makeTable(["other"]);
+    assert.equal(mapFieldToColumn(field, table, pg), 'bytea("payload").notNull()');
+    assert.equal(
+      mapFieldToColumn(field, table, sqliteDialect),
+      'blob("payload", { mode: "buffer" }).notNull()',
+    );
+  });
+
+  it("wraps a nullable blob in nullableBlob on SQLite and falls back to bytea on PG", () => {
+    const field = makeField({
+      name: "payload",
+      columnName: "payload",
+      type: { kind: "blob" },
+      nullable: true,
+    });
+    const table = makeTable(["other"]);
+    assert.equal(mapFieldToColumn(field, table, sqliteDialect), 'nullableBlob("payload")');
+    assert.equal(mapFieldToColumn(field, table, pg), 'bytea("payload")');
+  });
+});

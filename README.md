@@ -76,7 +76,7 @@ The emitter produces 6 files as a ready-to-use npm package:
 | `schema.ts`    | Table definitions (`pgTable`/`sqliteTable`), enums, constraints        |
 | `relations.ts` | `defineRelations()` with `through()` for many-to-many                |
 | `describe.ts`  | One typed query function per entity (fetch by PK with all relations) |
-| `types.ts`     | `base36Uuid` custom type, `DrizzleClient` type alias                 |
+| `types.ts`     | UUID custom types (one per encoding), `DrizzleClient` type alias     |
 | `index.ts`     | Barrel re-exports                                                    |
 | `package.json` | Package metadata with `drizzle-orm` dependency                       |
 
@@ -227,7 +227,7 @@ model Order {
 @primaryKey("authors")            // SQL table name
 model Author {
   @pk                             // marks field as primary key column
-  @uuid("base36", true)           // UUID with base36 encoding, auto-generated
+  @uuid("base36", true)           // UUID stored as base36, auto-generated
   authorId: string;
 
   @references(Author.authorId)             // foreign key to another entity
@@ -324,6 +324,7 @@ When using `sqlite`, types that don't exist natively in SQLite are mapped to com
 | `float64`     | `doublePrecision()`                 | `real()`                                |
 | `int64`       | `bigint({ mode: "number" })`        | `integer({ mode: "number" })`           |
 | `string` (with length) | `varchar({ length })`     | `text({ length })`                      |
+| `bytes`       | `bytea()`                           | `blob({ mode: "buffer" })`              |
 | TypeSpec `enum` | `pgEnum()`                        | `text()` (no native enums in SQLite)    |
 
 ## Front-end option
@@ -386,20 +387,45 @@ options:
 
 `foreign-keys: false` drops the collection-derived foreign keys for a consumer that manages referential integrity and delete cascades in the application (a database `ON DELETE CASCADE` would otherwise fight an app-managed cascade). `id-default: true` attaches `.$defaultFn(() => generateBase36Id())` to single-column text primary keys so a caller may omit the id. Both are honoured by the `remit` front-end.
 
+## UUID columns
+
+`@uuid` marks a column the application reads and writes as a 25-character base36 string. The `encoding` argument picks how that id is stored, and only the stored bytes change — every encoding round-trips to the same base36 string.
+
+| `encoding`  | Stored form                     | PostgreSQL | SQLite | Bytes per value (PG / SQLite) |
+| ----------- | ------------------------------- | ---------- | ------ | ----------------------------- |
+| `canonical` | 36-character hyphenated UUID    | `uuid`     | `text` | 16 / 36                       |
+| `base36`    | the 25-character base36 string  | `text`     | `text` | 25 / 25                       |
+| `raw`       | the UUID's 16 bytes             | `uuid`     | `blob` | 16 / 16                       |
+
+`canonical` is the default when the decorator names no encoding. PostgreSQL stores its native `uuid` type as 16 bytes, so `canonical` and `raw` are the same column there and only the SQLite side has a compact form to choose. SQLite has no native UUID type; `raw` is where a large table wins, at 16 bytes against 36.
+
+Each encoding is backed by its own generated custom type — `canonicalUuid`, `base36Uuid`, `rawUuid` — exported from `types.ts` alongside `generateBase36Id()`, which mints a fresh base36 id for any of them.
+
+```typespec
+@pk @uuid("raw", true)
+sessionId: string;
+
+@uuid("base36") @references(Account.accountId)
+accountId: string;
+```
+
 ## Type mapping (PostgreSQL)
 
-| TypeSpec               | Drizzle                             | PostgreSQL                |
-| ---------------------- | ----------------------------------- | ------------------------- |
-| `string`               | `text()`                            | `text`                    |
-| `string` (with length) | `varchar({ length })`               | `varchar(n)`              |
-| `int32`                | `integer()`                         | `integer`                 |
-| `int64`                | `bigint({ mode: "number" })`        | `bigint`                  |
-| `float32`              | `real()`                            | `real`                    |
-| `float64`              | `doublePrecision()`                 | `double precision`        |
-| `boolean`              | `boolean()`                         | `boolean`                 |
-| `utcDateTime`          | `timestamp({ withTimezone: true })` | `timestamptz`             |
-| `string` + `@uuid`     | `base36Uuid()`                      | `uuid`                    |
-| TypeSpec `enum`        | `pgEnum()`                          | `CREATE TYPE ... AS ENUM` |
+| TypeSpec                        | Drizzle                             | PostgreSQL                |
+| ------------------------------- | ----------------------------------- | ------------------------- |
+| `string`                        | `text()`                            | `text`                    |
+| `string` (with length)          | `varchar({ length })`               | `varchar(n)`              |
+| `int32`                         | `integer()`                         | `integer`                 |
+| `int64`                         | `bigint({ mode: "number" })`        | `bigint`                  |
+| `float32`                       | `real()`                            | `real`                    |
+| `float64`                       | `doublePrecision()`                 | `double precision`        |
+| `boolean`                       | `boolean()`                         | `boolean`                 |
+| `utcDateTime`                   | `timestamp({ withTimezone: true })` | `timestamptz`             |
+| `bytes`                         | `bytea()`                           | `bytea`                   |
+| `string` + `@uuid("canonical")` | `canonicalUuid()`                   | `uuid`                    |
+| `string` + `@uuid("base36")`    | `base36Uuid()`                      | `text`                    |
+| `string` + `@uuid("raw")`       | `rawUuid()`                         | `uuid`                    |
+| TypeSpec `enum`                 | `pgEnum()`                          | `CREATE TYPE ... AS ENUM` |
 
 ## Full example
 

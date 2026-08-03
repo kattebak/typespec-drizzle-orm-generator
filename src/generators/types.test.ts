@@ -172,3 +172,48 @@ describe("types generator (sqlite)", () => {
     assert.ok(!output.includes("nullableTimestamp"));
   });
 });
+
+describe("uuid custom types per encoding", () => {
+  const sqliteTypes = generateTypes(resolveDialect("sqlite"));
+
+  it("emits a distinct custom type for every encoding on both dialects", () => {
+    for (const name of ["canonicalUuid", "base36Uuid", "rawUuid"]) {
+      assert.ok(typesOutput.includes(`export const ${name} = customType<{`), `pg missing ${name}`);
+      assert.ok(
+        sqliteTypes.includes(`export const ${name} = customType<{`),
+        `sqlite missing ${name}`,
+      );
+    }
+  });
+
+  it("stores base36 verbatim rather than expanding it to a UUID", () => {
+    const base36Block = sqliteTypes.slice(sqliteTypes.indexOf("export const base36Uuid"));
+    const declaration = base36Block.slice(0, base36Block.indexOf("});"));
+    assert.ok(declaration.includes('dataType: () => "text",'));
+    assert.ok(!declaration.includes("toUUID"));
+    assert.ok(!declaration.includes("fromUUID"));
+  });
+
+  it("stores raw uuids as a 16-byte blob on SQLite", () => {
+    assert.ok(sqliteTypes.includes("function uuidToBytes(uuid: string): Uint8Array {"));
+    assert.ok(sqliteTypes.includes("function bytesToUuid(bytes: Uint8Array): string {"));
+    assert.ok(sqliteTypes.includes('dataType: () => "blob",'));
+    assert.ok(
+      sqliteTypes.includes(
+        "toDriver: (value: string): Uint8Array => uuidToBytes(translator.toUUID(value)),",
+      ),
+    );
+  });
+
+  it("stores raw uuids in the native pg uuid type, which needs no byte helpers", () => {
+    assert.ok(!typesOutput.includes("uuidToBytes"));
+    const rawBlock = typesOutput.slice(typesOutput.indexOf("export const rawUuid"));
+    assert.ok(rawBlock.slice(0, rawBlock.indexOf("});")).includes('dataType: () => "uuid",'));
+  });
+
+  it("exports a nullableBlob wrapper on SQLite only", () => {
+    assert.ok(sqliteTypes.includes("export const nullableBlob = customType<{"));
+    assert.ok(sqliteTypes.includes("  data: Uint8Array | undefined;"));
+    assert.ok(!typesOutput.includes("nullableBlob"));
+  });
+});

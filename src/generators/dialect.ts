@@ -1,6 +1,6 @@
 import type { ChainMethod } from "../codegen/index.js";
 import { arrayLiteral, fnCall, objectLiteral, quoted } from "../codegen/index.js";
-import type { FieldDef, FieldType } from "../ir/types.js";
+import type { FieldDef, FieldType, UuidEncoding } from "../ir/types.js";
 
 export type Dialect = "pg" | "sqlite";
 
@@ -12,18 +12,69 @@ export interface NullableWrapperDef {
   fromDriver?: string;
 }
 
+/** One emitted `customType` backing a `@uuid` column of a given encoding */
+export interface UuidTypeDef {
+  name: string;
+  dataType: string;
+  driverType: string;
+  doc: string;
+  toDriver?: string;
+  fromDriver?: string;
+}
+
 export interface DialectConfig {
   dialect: Dialect;
   coreModule: string;
   tableFn: string;
   enumFn: string | null;
-  uuidDataType: string;
+  uuidTypes: readonly UuidTypeDef[];
+  uuidHelpers: readonly string[];
   nullableWrappers: readonly NullableWrapperDef[];
   mapFieldType(field: FieldDef): string;
   mapNullableFieldType(field: FieldDef): string;
   nullableWrapperName(kind: FieldType["kind"]): string | null;
   mapTimestampDefault(): ChainMethod;
 }
+
+const uuidTypeNames: Readonly<Record<UuidEncoding, string>> = {
+  base36: "base36Uuid",
+  canonical: "canonicalUuid",
+  raw: "rawUuid",
+};
+
+/** Name of the emitted custom type a column of this encoding is built from */
+export function uuidTypeName(encoding: UuidEncoding): string {
+  return uuidTypeNames[encoding];
+}
+
+const uuidToBytesHelper = [
+  "function uuidToBytes(uuid: string): Uint8Array {",
+  '  const hex = uuid.replace(/-/g, "");',
+  "  const bytes = new Uint8Array(16);",
+  "  for (let i = 0; i < 16; i += 1) {",
+  "    bytes[i] = Number.parseInt(hex.slice(i * 2, i * 2 + 2), 16);",
+  "  }",
+  "  return bytes;",
+  "}",
+].join("\n");
+
+const bytesToUuidHelper = [
+  "function bytesToUuid(bytes: Uint8Array): string {",
+  '  const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");',
+  "  return [",
+  "    hex.slice(0, 8),",
+  "    hex.slice(8, 12),",
+  "    hex.slice(12, 16),",
+  "    hex.slice(16, 20),",
+  "    hex.slice(20, 32),",
+  '  ].join("-");',
+  "}",
+].join("\n");
+
+const canonicalDrivers = {
+  toDriver: "(value: string): string => translator.toUUID(value)",
+  fromDriver: "(value: string): string => translator.fromUUID(value)",
+} as const;
 
 export function resolveDialect(dialect: Dialect): DialectConfig {
   switch (dialect) {
@@ -65,13 +116,37 @@ function textEnumColumn(col: string, values: string[]): string {
   return `${fnCall("text", [col])}.$type<${union}>()`;
 }
 
+const pgUuidTypes: readonly UuidTypeDef[] = [
+  {
+    name: "canonicalUuid",
+    dataType: "uuid",
+    driverType: "string",
+    doc: "UUID column stored as native pg uuid, reads/writes as base36",
+    ...canonicalDrivers,
+  },
+  {
+    name: "base36Uuid",
+    dataType: "text",
+    driverType: "string",
+    doc: "UUID column stored as the 25-character base36 string, reads/writes as base36",
+  },
+  {
+    name: "rawUuid",
+    dataType: "uuid",
+    driverType: "string",
+    doc: "UUID column stored as native pg uuid — 16 bytes on disk — reads/writes as base36",
+    ...canonicalDrivers,
+  },
+];
+
 function pgDialect(): DialectConfig {
   return {
     dialect: "pg",
     coreModule: "drizzle-orm/pg-core",
     tableFn: "pgTable",
     enumFn: "pgEnum",
-    uuidDataType: "uuid",
+    uuidTypes: pgUuidTypes,
+    uuidHelpers: [],
     nullableWrappers: pgNullableWrappers,
     mapTimestampDefault: () => ({ method: "defaultNow" }),
     nullableWrapperName(kind: FieldType["kind"]): string | null {
@@ -114,8 +189,10 @@ function pgDialect(): DialectConfig {
           ]);
         case "jsonb":
           return fnCall("jsonb", [col]);
+        case "blob":
+          return fnCall("bytea", [col]);
         case "uuid":
-          return fnCall("base36Uuid", [col]);
+          return fnCall(uuidTypeName(field.type.encoding), [col]);
         case "enum":
           return fnCall(field.type.enumName, [col]);
         case "textEnum":
@@ -129,6 +206,7 @@ const sqliteNullableWrappers: readonly NullableWrapperDef[] = [
   { name: "nullableText", dataType: "text", jsType: "string" },
   { name: "nullableInteger", dataType: "integer", jsType: "number" },
   { name: "nullableReal", dataType: "real", jsType: "number" },
+  { name: "nullableBlob", dataType: "blob", jsType: "Uint8Array" },
 ];
 
 const sqliteNullableWrapperMap = new Map<string, string>([
@@ -137,7 +215,32 @@ const sqliteNullableWrapperMap = new Map<string, string>([
   ["integer", "nullableInteger"],
   ["real", "nullableReal"],
   ["doublePrecision", "nullableReal"],
+  ["blob", "nullableBlob"],
 ]);
+
+const sqliteUuidTypes: readonly UuidTypeDef[] = [
+  {
+    name: "canonicalUuid",
+    dataType: "text",
+    driverType: "string",
+    doc: "UUID column stored as text in the 36-character hyphenated form, reads/writes as base36",
+    ...canonicalDrivers,
+  },
+  {
+    name: "base36Uuid",
+    dataType: "text",
+    driverType: "string",
+    doc: "UUID column stored as text in the 25-character base36 form, reads/writes as base36",
+  },
+  {
+    name: "rawUuid",
+    dataType: "blob",
+    driverType: "Uint8Array",
+    doc: "UUID column stored as a 16-byte blob, reads/writes as base36",
+    toDriver: "(value: string): Uint8Array => uuidToBytes(translator.toUUID(value))",
+    fromDriver: "(value: Uint8Array): string => translator.fromUUID(bytesToUuid(value))",
+  },
+];
 
 function sqliteDialect(): DialectConfig {
   return {
@@ -145,7 +248,8 @@ function sqliteDialect(): DialectConfig {
     coreModule: "drizzle-orm/sqlite-core",
     tableFn: "sqliteTable",
     enumFn: null,
-    uuidDataType: "text",
+    uuidTypes: sqliteUuidTypes,
+    uuidHelpers: [uuidToBytesHelper, bytesToUuidHelper],
     nullableWrappers: sqliteNullableWrappers,
     mapTimestampDefault: () => ({ method: "$defaultFn", args: ["() => new Date()"] }),
     nullableWrapperName(kind: FieldType["kind"]): string | null {
@@ -194,8 +298,13 @@ function sqliteDialect(): DialectConfig {
             col,
             objectLiteral([["mode", quoted("json")]], { concise: true }),
           ]);
+        case "blob":
+          return fnCall("blob", [
+            col,
+            objectLiteral([["mode", quoted("buffer")]], { concise: true }),
+          ]);
         case "uuid":
-          return fnCall("base36Uuid", [col]);
+          return fnCall(uuidTypeName(field.type.encoding), [col]);
         case "enum":
           return fnCall("text", [
             col,
