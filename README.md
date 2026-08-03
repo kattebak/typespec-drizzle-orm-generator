@@ -399,7 +399,9 @@ options:
 
 `canonical` is the default when the decorator names no encoding. PostgreSQL stores its native `uuid` type as 16 bytes, so `canonical` and `raw` are the same column there and only the SQLite side has a compact form to choose. SQLite has no native UUID type; `raw` is where a large table wins, at 16 bytes against 36.
 
-Each encoding is backed by its own generated custom type — `canonicalUuid`, `base36Uuid`, `rawUuid` — exported from `types.ts` alongside `generateBase36Id()`, which mints a fresh base36 id for any of them.
+Each encoding is backed by its own generated custom type — `canonicalUuid`, `base36Uuid`, `rawUuid` — exported from `types.ts` alongside `generateBase36Id()`, which mints a fresh base36 id for any of them. The conversion is emitted into the package, so a generated package has no runtime dependencies.
+
+`base36` stores the id verbatim and converts nothing. `canonical` and `raw` convert every value in both directions, at about a microsecond each: a query passing 25,000 ids spends roughly 25 ms encoding them and 25 ms decoding the result.
 
 ```typespec
 @pk @uuid("raw", true)
@@ -435,7 +437,7 @@ See [src/fixtures/bookstore.tsp](src/fixtures/bookstore.tsp) for a complete 9-en
 
 ```bash
 npm install
-npm test            # type-check + 298 tests
+npm test            # type-check + 461 tests
 npm run lint:fix    # auto-fix with Biome
 ```
 

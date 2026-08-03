@@ -13,12 +13,19 @@ describe("types generator", () => {
     assert.ok(typesOutput.includes('import { customType } from "drizzle-orm/pg-core";'));
   });
 
-  it("imports short-uuid", () => {
-    assert.ok(typesOutput.includes('import short from "short-uuid";'));
+  it("imports nothing beyond the drizzle core module", () => {
+    const imports = typesOutput.split("\n").filter((line) => line.startsWith("import"));
+    assert.deepEqual(imports, [
+      'import { customType } from "drizzle-orm/pg-core";',
+      'import type { PgAsyncDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";',
+      'import type { relations } from "./relations.js";',
+    ]);
   });
 
-  it("creates base36 translator", () => {
-    assert.ok(typesOutput.includes("const translator = short(short.constants.uuid25Base36);"));
+  it("converts through its own codec rather than a runtime dependency", () => {
+    assert.ok(typesOutput.includes("function base36ToBytes(id: string): Uint8Array {"));
+    assert.ok(typesOutput.includes("function bytesToBase36(bytes: Uint8Array): string {"));
+    assert.ok(!typesOutput.includes("short-uuid"));
   });
 
   it("exports base36Uuid custom type", () => {
@@ -33,10 +40,14 @@ describe("types generator", () => {
 
   it("includes toDriver and fromDriver", () => {
     assert.ok(
-      typesOutput.includes("toDriver: (value: string): string => translator.toUUID(value),"),
+      typesOutput.includes(
+        "toDriver: (value: string): string => bytesToUuid(base36ToBytes(value)),",
+      ),
     );
     assert.ok(
-      typesOutput.includes("fromDriver: (value: string): string => translator.fromUUID(value),"),
+      typesOutput.includes(
+        "fromDriver: (value: string): string => bytesToBase36(uuidToBytes(value)),",
+      ),
     );
   });
 
@@ -58,7 +69,8 @@ describe("types generator", () => {
 
   it("exports generateBase36Id function", () => {
     assert.ok(typesOutput.includes("export function generateBase36Id(): string {"));
-    assert.ok(typesOutput.includes("return translator.new();"));
+    assert.ok(typesOutput.includes("crypto.getRandomValues(bytes);"));
+    assert.ok(typesOutput.includes("return bytesToBase36(bytes);"));
   });
 
   it("exports nullableText custom type", () => {
@@ -194,19 +206,17 @@ describe("uuid custom types per encoding", () => {
     assert.ok(!declaration.includes("fromUUID"));
   });
 
-  it("stores raw uuids as a 16-byte blob on SQLite", () => {
-    assert.ok(sqliteTypes.includes("function uuidToBytes(uuid: string): Uint8Array {"));
-    assert.ok(sqliteTypes.includes("function bytesToUuid(bytes: Uint8Array): string {"));
+  it("stores raw uuids as a 16-byte blob on SQLite, with no hex form in between", () => {
     assert.ok(sqliteTypes.includes('dataType: () => "blob",'));
     assert.ok(
-      sqliteTypes.includes(
-        "toDriver: (value: string): Uint8Array => uuidToBytes(translator.toUUID(value)),",
-      ),
+      sqliteTypes.includes("toDriver: (value: string): Uint8Array => base36ToBytes(value),"),
+    );
+    assert.ok(
+      sqliteTypes.includes("fromDriver: (value: Uint8Array): string => bytesToBase36(value),"),
     );
   });
 
-  it("stores raw uuids in the native pg uuid type, which needs no byte helpers", () => {
-    assert.ok(!typesOutput.includes("uuidToBytes"));
+  it("stores raw uuids in the native pg uuid type", () => {
     const rawBlock = typesOutput.slice(typesOutput.indexOf("export const rawUuid"));
     assert.ok(rawBlock.slice(0, rawBlock.indexOf("});")).includes('dataType: () => "uuid",'));
   });

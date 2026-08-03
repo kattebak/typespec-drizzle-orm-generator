@@ -1,18 +1,15 @@
-import { exportConst, fnCall, importDecl, quoted } from "../codegen/index.js";
+import { exportConst, importDecl, quoted } from "../codegen/index.js";
 import type { DialectConfig, NullableWrapperDef, UuidTypeDef } from "./dialect.js";
+import { generateBase36IdSource, uuidCodecHelpers } from "./uuid-codec.js";
 
 export function generateTypes(dialect: DialectConfig, schemaOnly = false): string {
   const sections: string[] = [];
 
   sections.push(importDecl(["customType"], dialect.coreModule));
-  sections.push(`import short from ${quoted("short-uuid")};`);
   if (!schemaOnly) sections.push(...drizzleClientImports(dialect));
   sections.push("");
 
-  sections.push(`const translator = ${fnCall("short", ["short.constants.uuid25Base36"])};`);
-  sections.push("");
-
-  for (const helper of dialect.uuidHelpers) {
+  for (const helper of uuidCodecHelpers) {
     sections.push(helper);
     sections.push("");
   }
@@ -22,9 +19,7 @@ export function generateTypes(dialect: DialectConfig, schemaOnly = false): strin
     sections.push("");
   }
 
-  sections.push("export function generateBase36Id(): string {");
-  sections.push("  return translator.new();");
-  sections.push("}");
+  sections.push(generateBase36IdSource);
   sections.push("");
 
   for (const wrapper of dialect.nullableWrappers) {

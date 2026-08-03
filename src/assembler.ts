@@ -65,9 +65,6 @@ function generatePackageJson(config: EmitterConfig): string {
       build: "tsc",
       prepare: "tsc",
     },
-    dependencies: {
-      "short-uuid": "^5.2.0",
-    },
     peerDependencies: {
       "drizzle-orm": config.schemaOnly ? ">=0.30.0" : ">=1.0.0-beta.1",
       typescript: ">=5.0.0",
