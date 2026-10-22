@@ -1,6 +1,7 @@
 import type { Model, ModelProperty } from "@typespec/compiler";
 import { $lib, StateKeys } from "../lib.js";
 import type { IndexDef, ProgramStateAccess } from "./types.js";
+import { isVisibilityCopy } from "./visibility-copy.js";
 
 interface IndexMeta {
   name: string;
@@ -42,7 +43,7 @@ export function readIndexDefs(program: ProgramStateAccess, model: Model): IndexD
 export function reportUnclaimedIndexDefs(program: ProgramStateAccess, claimed: Set<Model>): void {
   for (const [target, defs] of program.stateMap(StateKeys.indexDef)) {
     const model = target as Model;
-    if (claimed.has(model)) continue;
+    if (claimed.has(model) || isVisibilityCopy(model)) continue;
     for (const def of defs as IndexMeta[]) {
       program.reportDiagnostic(
         $lib.createDiagnostic({

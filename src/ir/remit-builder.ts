@@ -20,6 +20,7 @@ import type {
   ReferentialAction,
   TableDef,
 } from "./types.js";
+import { isVisibilityCopy } from "./visibility-copy.js";
 
 /**
  * Remit front-end for the Drizzle emitter.
@@ -76,7 +77,7 @@ export function buildRemitIR(
   const models: Model[] = [];
   navigateProgram(program, {
     model(model) {
-      if (firstDecorator(model, "@entity")) models.push(model);
+      if (firstDecorator(model, "@entity") && !isVisibilityCopy(model)) models.push(model);
     },
   });
 
