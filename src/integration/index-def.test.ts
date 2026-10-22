@@ -302,3 +302,83 @@ describe("decorator namespacing", () => {
     assert.ok(tables[0].indexes.some((i) => i.name === "row_by_score"));
   });
 });
+
+describe("visibility templates", () => {
+  it("emits one table per @table model when Create<T> and Update<T> copy it", async () => {
+    const host = await createHost();
+    host.addTypeSpecFile(
+      "main.tsp",
+      `
+      import "./drizzle.tsp";
+      using Drizzle;
+      namespace Test;
+
+      @table("Row", "test")
+      @primaryKey("rows")
+      @indexDef("row_by_account_name", [Row.accountId, Row.name], true)
+      model Row {
+        @pk @visibility(Lifecycle.Read) rowId: string;
+        @visibility(Lifecycle.Read) accountId: string;
+        name: string;
+      }
+
+      model CreateRowInput is Create<Row>;
+      model UpdateRowInput is Update<Row>;
+      `,
+    );
+    await host.compile("main.tsp");
+
+    const { tables } = buildIR(host.program);
+    assert.deepEqual(
+      tables.map((t) => t.name),
+      ["Row"],
+    );
+    assert.deepEqual(host.program.diagnostics, []);
+    assert.match(
+      schemaOf(tables),
+      /uniqueIndex\("row_by_account_name"\)\.on\(table\.accountId, table\.name\)/,
+    );
+  });
+
+  it("emits one table per @entity model when Create<T> copies it", async () => {
+    const host = await createHost();
+    host.addTypeSpecFile(
+      "main.tsp",
+      `
+      import "./drizzle.tsp";
+      import "./electrodb.tsp";
+      namespace Test;
+
+      @entity("mailbox", "remit")
+      @index("Mailbox", { pk: [Mailbox.mailboxId] })
+      @Drizzle.indexDef("mailbox_by_account_full_path", [Mailbox.accountId, Mailbox.fullPath], true)
+      model Mailbox {
+        @visibility(Lifecycle.Read) mailboxId: string;
+        @visibility(Lifecycle.Read) accountId: string;
+        @visibility(Lifecycle.Create, Lifecycle.Read) fullPath: string;
+      }
+
+      @entity("lock", "remit")
+      @index("Lock", { pk: [Lock.lockId] })
+      model Lock {
+        @visibility(Lifecycle.Read) lockId: string;
+      }
+
+      model CreateMailboxInput is Create<Mailbox>;
+      model CreateLockInput is Create<Lock>;
+      `,
+    );
+    await host.compile("main.tsp");
+
+    const { tables } = buildRemitIR(host.program);
+    assert.deepEqual(
+      tables.map((t) => t.name),
+      ["Mailbox", "Lock"],
+    );
+    assert.deepEqual(host.program.diagnostics, []);
+    assert.match(
+      schemaOf(tables),
+      /uniqueIndex\("mailbox_by_account_full_path"\)\.on\(table\.accountId, table\.fullPath\)/,
+    );
+  });
+});

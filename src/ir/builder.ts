@@ -16,6 +16,7 @@ import type {
   UuidEncoding,
 } from "./types.js";
 import { DEFAULT_UUID_ENCODING, isUuidEncoding } from "./types.js";
+import { isVisibilityCopy } from "./visibility-copy.js";
 
 export type { ProgramStateAccess } from "./types.js";
 
@@ -109,6 +110,7 @@ export function buildIR(program: ProgramStateAccess): {
   for (const [target, meta] of tableState) {
     const model = target as Model;
     if (model.kind !== "Model") continue;
+    if (isVisibilityCopy(model)) continue;
     claimed.add(model);
 
     const tableMeta = meta as TableMeta;
