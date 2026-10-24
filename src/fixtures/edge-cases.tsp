@@ -33,6 +33,7 @@ model Account {
 @table("Order", "edge")
 @primaryKey("orders")
 @indexDef("idx_orders_account_created", [Order.accountId, Order.createdAt])
+@indexDef("idx_orders_open", [Order.accountId], false, "total_cents > 0")
 model Order {
   @pk
   @uuid("base36", true)
