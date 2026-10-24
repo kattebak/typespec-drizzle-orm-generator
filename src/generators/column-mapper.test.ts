@@ -543,7 +543,7 @@ describe("uuid encodings and blob columns", () => {
     assert.equal(mapFieldToColumn(field, table, pg), 'bytea("payload").notNull()');
     assert.equal(
       mapFieldToColumn(field, table, sqliteDialect),
-      'blob("payload", { mode: "buffer" }).notNull()',
+      'blob("payload", { mode: "buffer" }).$type<Uint8Array>().notNull()',
     );
   });
 

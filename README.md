@@ -325,7 +325,7 @@ When using `sqlite`, types that don't exist natively in SQLite are mapped to com
 | `float64`     | `doublePrecision()`                 | `real()`                                |
 | `int64`       | `bigint({ mode: "number" })`        | `integer({ mode: "number" })`           |
 | `string` (with length) | `varchar({ length })`     | `text({ length })`                      |
-| `bytes`       | `bytea()`                           | `blob({ mode: "buffer" })`              |
+| `bytes`       | `bytea()`                           | `blob({ mode: "buffer" }).$type<Uint8Array>()` |
 | TypeSpec `enum` | `pgEnum()`                        | `text()` (no native enums in SQLite)    |
 
 ## Front-end option
@@ -342,6 +342,7 @@ The `remit` front-end maps an ElectroDB model to a table:
 - **Primary key** is the entity's own identity field, `<entity>Id`, as a single column. The ElectroDB primary index is a DynamoDB access pattern, not the entity's identity, so it becomes an ordinary secondary index. An entity with no `<entity>Id` field keeps the ElectroDB primary composite as its key.
 - Every `@index` becomes a named secondary index, and every `@indexDef` adds an index that exists in SQL only (see below).
 - **Enums** are text columns narrowed by a `$type` union, not pgEnums — a store that mirrors a DynamoDB port keeps enum values as strings and avoids an `ALTER TYPE` per new value.
+- **`bytes`** is a blob column typed `Uint8Array`, the same as under the `drizzle` front-end.
 - A `collection` shared by two or more entities becomes an `ON DELETE CASCADE` foreign key from each member to the entity that owns the shared partition key (unless `foreign-keys: false`).
 
 ### SQL-only indexes

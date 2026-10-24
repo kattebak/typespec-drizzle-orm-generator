@@ -347,6 +347,8 @@ function resolveScalarType(scalar: Scalar): FieldType {
       return { kind: "timestamp" };
     case "string":
       return { kind: "text" };
+    case "bytes":
+      return { kind: "blob" };
   }
 
   if (scalar.baseScalar) return resolveScalarType(scalar.baseScalar);
