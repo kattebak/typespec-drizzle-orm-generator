@@ -391,6 +391,17 @@ options:
 
 `relations.ts`, `describe.ts`, and the `DrizzleClient` type use the Drizzle v2 relational API (`defineRelations`, `PgAsyncDatabase`). Set `schema-only: true` to emit just the table schema (`schema.ts` + the `base36Uuid` / nullable custom types), which stays compatible with Drizzle v1 consumers that manage relations themselves. The generated `package.json` then declares a `drizzle-orm` peer range of `>=0.30.0`.
 
+## Getting SQL DDL
+
+The emitter writes TypeScript only. To get SQL, run `drizzle-kit export` over the generated `schema.ts`; it needs no database and no migration folder:
+
+```sh
+npx drizzle-kit export --dialect postgresql --schema ./build/drizzle-entities/schema.ts > ddl.sql
+npx drizzle-kit export --dialect sqlite --schema ./build/drizzle-entities/schema.ts > ddl.sql
+```
+
+Enums, indexes, partial indexes (`WHERE`) and array defaults come through. For migrations over an existing database, use `drizzle-kit generate`.
+
 ## Foreign keys and id defaults
 
 `foreign-keys: false` drops the collection-derived foreign keys for a consumer that manages referential integrity and delete cascades in the application (a database `ON DELETE CASCADE` would otherwise fight an app-managed cascade). `id-default: true` attaches `.$defaultFn(() => generateBase36Id())` to single-column text primary keys so a caller may omit the id. Both are honoured by the `remit` front-end.

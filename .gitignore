@@ -143,3 +143,4 @@ vite.config.ts.timestamp-*
 
 # Generated packages built by the round-trip tests
 .tmp/
+.ddl-output
