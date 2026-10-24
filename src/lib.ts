@@ -21,6 +21,12 @@ export const $lib = createTypeSpecLibrary({
         default: paramMessage`@indexDef "${"index"}" references column "${"column"}", which is not a property of model ${"model"}.`,
       },
     },
+    "unrepresentable-default": {
+      severity: "error",
+      messages: {
+        default: paramMessage`The default of property "${"property"}" holds ${"element"}, which no column default can hold. Use string, number, boolean or enum elements, or remove the default.`,
+      },
+    },
   },
   state: {
     table: { description: "State for @table decorator" },

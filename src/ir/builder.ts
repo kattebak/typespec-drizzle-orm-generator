@@ -2,7 +2,7 @@ import type { Model, ModelProperty, Program, Scalar } from "@typespec/compiler";
 import { getMaxLength } from "@typespec/compiler";
 import { toSnakeCase } from "../generators/naming.js";
 import { $lib, StateKeys } from "../lib.js";
-import { readDefaultValue } from "./default-value.js";
+import { readColumnDefault } from "./default-value.js";
 import { readIndexDefs, reportUnclaimedIndexDefs, toModelProperties } from "./index-def.js";
 import type {
   EnumDef,
@@ -198,7 +198,7 @@ export function buildIR(program: ProgramStateAccess): {
         field.visibility = vis as "read";
       }
 
-      const defaultVal = readDefaultValue(modelProp);
+      const defaultVal = readColumnDefault(program, modelProp);
       if (defaultVal !== undefined) {
         field.defaultValue = defaultVal;
       }
