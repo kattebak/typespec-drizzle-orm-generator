@@ -11,8 +11,8 @@ const none: DefaultRead = { kind: "none" };
 
 /**
  * Reads a model property's default for its column. A default no column can hold
- * is reported as an error rather than dropped, since a dropped default turns a
- * NOT NULL column without one into a failed migration on a table with rows.
+ * is dropped with a warning, since a dropped default turns a NOT NULL column
+ * without one into a failed migration on a table with rows.
  */
 export function readColumnDefault(
   program: ProgramStateAccess,
