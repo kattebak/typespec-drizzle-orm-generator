@@ -50,6 +50,8 @@ model Account {
 `;
 
 const DRIZZLE_DECORATORS = `
+using TypeSpec.Reflection;
+
 extern dec table(target: Model, name: valueof string, service: valueof string);
 extern dec primaryKey(target: Model, tableName: valueof string);
 extern dec pk(target: ModelProperty);
