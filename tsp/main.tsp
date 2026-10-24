@@ -46,8 +46,17 @@ extern dec check(target: ModelProperty, expression: valueof string);
  * vocabulary the remit front-end reads), `@indexDef` is read by this generator
  * alone, so it never becomes a secondary index in another emitter's output. Both
  * front-ends emit it. The name is used verbatim.
+ *
+ * `where` makes it a partial index: a raw SQL predicate over column names, such
+ * as `"deleted_at IS NULL"`, emitted verbatim as the index WHERE clause.
  */
-extern dec indexDef(target: Model, name: valueof string, columns: ModelProperty[], unique?: valueof boolean);
+extern dec indexDef(
+  target: Model,
+  name: valueof string,
+  columns: ModelProperty[],
+  unique?: valueof boolean,
+  where?: valueof string
+);
 extern dec foreignKeyDef(target: Model, name: valueof string, columns: ModelProperty[], foreignColumns: ModelProperty[]);
 extern dec minValue(target: ModelProperty, value: valueof int32);
 extern dec maxValue(target: ModelProperty, value: valueof int32);

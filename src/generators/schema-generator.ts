@@ -56,14 +56,20 @@ function generateImports(tables: TableDef[], enums: EnumDef[], dialect: DialectC
 }
 
 function needsSqlImport(tables: TableDef[]): boolean {
-  return tables.some((t) =>
-    t.fields.some(
-      (f) =>
-        f.constraints?.minValue !== undefined ||
-        f.constraints?.maxValue !== undefined ||
-        f.constraints?.check !== undefined,
-    ),
+  return tables.some(
+    (t) =>
+      t.indexes.some((idx) => idx.where !== undefined) ||
+      t.fields.some(
+        (f) =>
+          f.constraints?.minValue !== undefined ||
+          f.constraints?.maxValue !== undefined ||
+          f.constraints?.check !== undefined,
+      ),
   );
+}
+
+function sqlTemplate(expression: string): string {
+  return `sql\`${expression.replace(/[\\`]|\$\{/g, (match) => `\\${match}`)}\``;
 }
 
 function collectCoreImports(
@@ -291,7 +297,8 @@ function generateTableExtras(table: TableDef, shouldPluralize: boolean): string[
   for (const idx of table.indexes) {
     const cols = idx.columns.map((c) => `table.${c}`);
     const idxFn = idx.unique ? "uniqueIndex" : "index";
-    extras.push(`    ${fnCall(idxFn, [quoted(idx.name)])}.on(${cols.join(", ")})`);
+    const where = idx.where === undefined ? "" : `.where(${sqlTemplate(idx.where)})`;
+    extras.push(`    ${fnCall(idxFn, [quoted(idx.name)])}.on(${cols.join(", ")})${where}`);
   }
 
   for (const fk of table.foreignKeys) {

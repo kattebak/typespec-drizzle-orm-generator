@@ -95,6 +95,8 @@ export interface IndexDef {
   name: string;
   columns: string[];
   unique: boolean;
+  /** Raw SQL predicate that makes this a partial index */
+  where?: string;
 }
 
 /** Composite unique constraint from @unique({ name, columns }) */
