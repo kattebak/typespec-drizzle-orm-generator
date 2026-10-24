@@ -338,6 +338,18 @@ describe("decorator functions", () => {
     assert.equal(stored[0].unique, true);
   });
 
+  it("$indexDef stores a partial index predicate", () => {
+    const program = createMockProgram();
+    const ctx = createMockContext(program);
+    const model = mockModel("Book");
+    const col = mockProp("isbn");
+
+    $indexDef(ctx, model, "books_live_isbn_idx", [col], true, "deleted_at IS NULL");
+
+    const stored = program.stateMap(StateKeys.indexDef).get(model) as Array<{ where?: string }>;
+    assert.equal(stored[0].where, "deleted_at IS NULL");
+  });
+
   it("$indexDef accumulates multiple indexes on same model", () => {
     const program = createMockProgram();
     const ctx = createMockContext(program);

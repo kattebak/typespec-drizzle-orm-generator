@@ -526,6 +526,18 @@ describe("schema generator", () => {
     assert.ok(output.includes('uniqueIndex("books_isbn_idx").on(table.isbn)'));
   });
 
+  it("generates a partial index with an escaped where predicate", () => {
+    const table: TableDef = {
+      ...bookstoreTables[0],
+      indexes: [{ name: "idx_live", columns: ["name"], unique: false, where: `name <> '\`\${x}'` }],
+    };
+    const output = generateSchema([table], [], sqlite);
+    assert.ok(output.includes('import { sql } from "drizzle-orm";'));
+    assert.ok(
+      output.includes(`index("idx_live").on(table.name).where(sql\`name <> '\\\`\\\${x}'\`)`),
+    );
+  });
+
   it("generates .unique() for single-column unique constraint", () => {
     const tableWithUnique: TableDef = {
       name: "Author",

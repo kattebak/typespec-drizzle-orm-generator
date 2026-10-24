@@ -7,6 +7,7 @@ interface IndexMeta {
   name: string;
   columns: ModelProperty[];
   unique: boolean;
+  where?: string;
 }
 
 /**
@@ -32,6 +33,7 @@ export function readIndexDefs(program: ProgramStateAccess, model: Model): IndexD
       resolveColumn(program, model, def.name, column),
     ),
     unique: def.unique ?? false,
+    ...(def.where === undefined ? {} : { where: def.where }),
   }));
 }
 

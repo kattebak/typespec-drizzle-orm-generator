@@ -262,6 +262,7 @@ price: float64;
 @compositeUnique("uq_book_lang", [Edition.bookId, Edition.language])
 @indexDef("idx_author_year", [Book.authorId, Book.publicationYear])
 @indexDef("idx_isbn", [Book.isbn], true)  // unique index
+@indexDef("idx_live_isbn", [Book.isbn], true, "deleted_at IS NULL")  // partial index
 @foreignKeyDef("fk_order", [cols...], [foreignCols...])  // composite FK
 ```
 
@@ -369,6 +370,13 @@ model ThreadMessage { ... }
 Both front-ends emit it, and the name is used verbatim, so it is the name your
 migration history is keyed on. An `@indexDef` on a model the selected front-end
 generates no table for is a compile error, not a dropped index.
+
+A fifth argument makes it a partial index. The predicate is raw SQL over column
+names, emitted verbatim as `.where(sql\`...\`)` in both dialects:
+
+```typespec
+@Drizzle.indexDef("tm_live_by_mailbox", [ThreadMessage.mailboxId], false, "deleted_at IS NULL")
+```
 
 ```yaml
 options:

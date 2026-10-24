@@ -80,13 +80,20 @@ export function $indexDef(
   name: string,
   columns: ModelProperty[],
   unique?: boolean,
+  where?: string,
 ): void {
   const existing = (context.program.stateMap(StateKeys.indexDef).get(target) ?? []) as Array<{
     name: string;
     columns: ModelProperty[];
     unique: boolean;
+    where?: string;
   }>;
-  existing.push({ name, columns, unique: unique ?? false });
+  existing.push({
+    name,
+    columns,
+    unique: unique ?? false,
+    ...(where === undefined ? {} : { where }),
+  });
   context.program.stateMap(StateKeys.indexDef).set(target, existing);
 }
 
