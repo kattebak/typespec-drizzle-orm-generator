@@ -272,10 +272,10 @@ function sqliteDialect(): DialectConfig {
             objectLiteral([["mode", quoted("json")]], { concise: true }),
           ]);
         case "blob":
-          return fnCall("blob", [
+          return `${fnCall("blob", [
             col,
             objectLiteral([["mode", quoted("buffer")]], { concise: true }),
-          ]);
+          ])}.$type<Uint8Array>()`;
         case "uuid":
           return fnCall(uuidTypeName(field.type.encoding), [col]);
         case "enum":
