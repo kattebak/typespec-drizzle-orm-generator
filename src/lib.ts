@@ -22,9 +22,9 @@ export const $lib = createTypeSpecLibrary({
       },
     },
     "unrepresentable-default": {
-      severity: "warning",
+      severity: "error",
       messages: {
-        default: paramMessage`The default of property "${"property"}" holds ${"element"}, which no column default can hold, so the column is emitted without one. Use string, number, boolean or enum elements, or remove the default.`,
+        default: paramMessage`The default of property "${"property"}" holds ${"element"}, which no column default can hold. Use string, number, boolean or enum elements, or remove the default.`,
       },
     },
   },

@@ -88,12 +88,7 @@ async function compile(frontend: Frontend, source: string): Promise<TestHost> {
   return host;
 }
 
-async function emit(
-  host: TestHost,
-  frontend: Frontend,
-  dialect: Dialect,
-  outputName = `${frontend}-${dialect}`,
-): Promise<string> {
+async function emit(host: TestHost, frontend: Frontend, dialect: Dialect): Promise<string> {
   const emitterOutputDir = `/emit-${frontend}-${dialect}`;
   const options: EmitterOptions = { frontend, dialect, "schema-only": true };
   await $onEmit({
@@ -102,7 +97,7 @@ async function emit(
     options,
   } as unknown as EmitContext<EmitterOptions>);
 
-  const outputDir = join(outputRoot, outputName);
+  const outputDir = join(outputRoot, `${frontend}-${dialect}`);
   await rm(outputDir, { recursive: true, force: true });
   await mkdir(outputDir, { recursive: true });
   for (const [path, content] of host.fs) {
@@ -136,10 +131,7 @@ function isColumn(value: unknown): value is Column {
   return typeof value === "object" && value !== null && "hasDefault" in value;
 }
 
-async function loadAccountColumns(
-  outputDir: string,
-  names: string[] = ["syncedServices", "labels", "limits", "empty", "plain"],
-): Promise<Map<string, Column>> {
+async function loadAccountColumns(outputDir: string): Promise<Map<string, Column>> {
   const schema: Record<string, unknown> = await import(
     pathToFileURL(join(outputDir, "schema.ts")).href
   );
@@ -149,7 +141,7 @@ async function loadAccountColumns(
   );
   assert.ok(table, "account table not exported");
   const columns = new Map<string, Column>();
-  for (const name of names) {
+  for (const name of ["syncedServices", "labels", "limits", "empty", "plain"]) {
     const column = table[name];
     assert.ok(isColumn(column), `${name} is not a column`);
     columns.set(name, column);
@@ -187,20 +179,18 @@ for (const frontend of ["drizzle", "remit"] as const) {
 
 describe("array defaults no column can hold", () => {
   for (const frontend of ["drizzle", "remit"] as const) {
-    it(`warns on the ${frontend} front-end and emits the column without a default`, async () => {
+    it(`reports an error on the ${frontend} front-end instead of dropping the default`, async () => {
       const source = (frontend === "drizzle" ? DRIZZLE_SOURCE : REMIT_SOURCE).replace(
         "plain: string[];",
         "plain: string[];\n  huge: int64[] = #[9007199254740993];",
       );
       const host = await compile(frontend, source);
-      const outputDir = await emit(host, frontend, "sqlite", `${frontend}-unrepresentable`);
+      await emit(host, frontend, "sqlite");
 
       assert.deepEqual(
         host.program.diagnostics.map((d) => [d.code, d.severity]),
-        [["@kattebak/typespec-drizzle-orm-generator/unrepresentable-default", "warning"]],
+        [["@kattebak/typespec-drizzle-orm-generator/unrepresentable-default", "error"]],
       );
-      const columns = await loadAccountColumns(outputDir, ["huge"]);
-      assert.equal(columns.get("huge")?.hasDefault, false);
     });
   }
 });
