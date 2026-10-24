@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import { before, describe, it } from "node:test";
 import type { ModelProperty } from "@typespec/compiler";
 import { createTestHost } from "@typespec/compiler/testing";
+import type { DefaultRead } from "./default-value.ts";
 import { readDefaultValue } from "./default-value.ts";
-import type { DefaultValue } from "./types.ts";
 
 /**
  * Defaults are read off compiled TypeSpec, not hand-built fixtures: every shape
@@ -12,7 +12,7 @@ import type { DefaultValue } from "./types.ts";
  * from the generated schema.
  */
 describe("readDefaultValue over compiled TypeSpec", () => {
-  let defaults: Map<string, DefaultValue | undefined>;
+  let defaults: Map<string, DefaultRead>;
 
   before(async () => {
     const host = await createTestHost();
@@ -40,6 +40,11 @@ describe("readDefaultValue over compiled TypeSpec", () => {
         bare: Bare = Bare.First;
         flags: string[] = #[];
         preset: string[] = #["a"];
+        categories: Category[] = #[Category.Newsletter, Category.Uncategorized];
+        mixed: (int32 | boolean)[] = #[1, true];
+        nested: string[][] = #[#["x"], #[]];
+        huge: int64[] = #[9007199254740993];
+        records: {}[] = #[#{}];
         plain: string;
       }
       `,
@@ -60,39 +65,62 @@ describe("readDefaultValue over compiled TypeSpec", () => {
   });
 
   it("reads a string default", () => {
-    assert.equal(defaults.get("text"), "plain");
-    assert.equal(defaults.get("escaped"), "\\Seen");
+    assert.deepEqual(defaults.get("text"), { kind: "value", value: "plain" });
+    assert.deepEqual(defaults.get("escaped"), { kind: "value", value: "\\Seen" });
   });
 
   it("reads a numeric default as a number", () => {
-    assert.equal(defaults.get("count"), 3);
+    assert.deepEqual(defaults.get("count"), { kind: "value", value: 3 });
   });
 
   it("falls back to bigint for a numeric default no double can hold", () => {
-    assert.equal(defaults.get("big"), 9007199254740993n);
+    assert.deepEqual(defaults.get("big"), { kind: "value", value: 9007199254740993n });
   });
 
   it("reads a boolean default", () => {
-    assert.equal(defaults.get("flag"), true);
+    assert.deepEqual(defaults.get("flag"), { kind: "value", value: true });
   });
 
   it("reads an enum member default as its stored value", () => {
-    assert.equal(defaults.get("category"), "uncategorized");
+    assert.deepEqual(defaults.get("category"), { kind: "value", value: "uncategorized" });
   });
 
   it("falls back to the member name for a valueless enum member", () => {
-    assert.equal(defaults.get("bare"), "First");
+    assert.deepEqual(defaults.get("bare"), { kind: "value", value: "First" });
   });
 
   it("reads an empty array default", () => {
-    assert.deepEqual(defaults.get("flags"), []);
+    assert.deepEqual(defaults.get("flags"), { kind: "value", value: [] });
   });
 
-  it("has no default for a non-empty array, which no column default expresses", () => {
-    assert.equal(defaults.get("preset"), undefined);
+  it("reads a non-empty array default", () => {
+    assert.deepEqual(defaults.get("preset"), { kind: "value", value: ["a"] });
+  });
+
+  it("reads an array of enum members as their stored values", () => {
+    assert.deepEqual(defaults.get("categories"), {
+      kind: "value",
+      value: ["newsletter", "uncategorized"],
+    });
+  });
+
+  it("reads numeric, boolean and nested array elements", () => {
+    assert.deepEqual(defaults.get("mixed"), { kind: "value", value: [1, true] });
+    assert.deepEqual(defaults.get("nested"), { kind: "value", value: [["x"], []] });
+  });
+
+  it("flags an array element JSON cannot hold exactly", () => {
+    assert.equal(defaults.get("huge")?.kind, "unrepresentable");
+  });
+
+  it("flags an array element with no literal form", () => {
+    assert.deepEqual(defaults.get("records"), {
+      kind: "unrepresentable",
+      element: "an object",
+    });
   });
 
   it("has no default for a property without one", () => {
-    assert.equal(defaults.get("plain"), undefined);
+    assert.deepEqual(defaults.get("plain"), { kind: "none" });
   });
 });

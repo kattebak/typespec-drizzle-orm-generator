@@ -10,7 +10,7 @@ import type {
 } from "@typespec/compiler";
 import { navigateProgram } from "@typespec/compiler";
 import { toSnakeCase } from "../generators/naming.js";
-import { readDefaultValue } from "./default-value.js";
+import { readColumnDefault } from "./default-value.js";
 import { readIndexDefs, reportUnclaimedIndexDefs } from "./index-def.js";
 import type {
   EnumDef,
@@ -122,7 +122,7 @@ export function buildRemitIR(
         field.autoGenerateId = true;
       }
 
-      const defaultValue = readDefaultValue(prop);
+      const defaultValue = readColumnDefault(program, prop);
       if (defaultValue !== undefined) field.defaultValue = defaultValue;
 
       fields.push(field);
