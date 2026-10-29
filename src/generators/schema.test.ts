@@ -1044,3 +1044,35 @@ describe("schema generator: uuid encodings and blob columns", () => {
     assert.ok(output.includes('payload: bytea("payload").notNull(),'));
   });
 });
+
+describe("schema generator (pg-schema)", () => {
+  const output = generateSchema(bookstoreTables, bookstoreEnums, pg, true, "markets");
+
+  it("declares the schema and imports pgSchema instead of pgTable and pgEnum", () => {
+    assert.ok(output.includes('export const marketsSchema = pgSchema("markets");'));
+    assert.match(output, /import \{[^}]*\bpgSchema\b[^}]*\} from "drizzle-orm\/pg-core"/);
+    assert.ok(!output.includes("pgTable"));
+    assert.ok(!output.includes("pgEnum"));
+  });
+
+  it("emits every table through the schema", () => {
+    assert.ok(output.includes('export const authors = marketsSchema.table("authors", {'));
+    assert.ok(output.includes("export const editions = marketsSchema.table(\n"));
+    assert.equal(output.match(/= marketsSchema\.table\(/g)?.length, bookstoreTables.length);
+  });
+
+  it("emits every enum through the schema", () => {
+    assert.ok(output.includes('export const bookFormatEnum = marketsSchema.enum("book_format", ['));
+  });
+
+  it("keeps foreign keys pointing at the table variables", () => {
+    assert.ok(output.includes(".references(() => authors.authorId)"));
+  });
+
+  it("is ignored by the sqlite dialect", () => {
+    assert.equal(
+      generateSchema(bookstoreTables, bookstoreEnums, sqlite, true, "markets"),
+      generateSchema(bookstoreTables, bookstoreEnums, sqlite),
+    );
+  });
+});

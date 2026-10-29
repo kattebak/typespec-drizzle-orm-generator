@@ -12,33 +12,72 @@ import type { EnumDef, FieldDef, TableDef } from "../ir/types.js";
 import { mapFieldToColumn } from "./column-mapper.js";
 import type { DialectConfig } from "./dialect.js";
 import { uuidTypeName } from "./dialect.js";
-import { toTableVariableName } from "./naming.js";
+import { toSchemaVariableName, toTableVariableName } from "./naming.js";
+
+interface SchemaTarget {
+  tableFn: string;
+  enumFn: string | null;
+  coreImport: string;
+  enumImport: string | null;
+  declaration?: string;
+}
+
+function resolveSchemaTarget(dialect: DialectConfig, pgSchema?: string): SchemaTarget {
+  if (pgSchema === undefined || dialect.dialect !== "pg") {
+    return {
+      tableFn: dialect.tableFn,
+      enumFn: dialect.enumFn,
+      coreImport: dialect.tableFn,
+      enumImport: dialect.enumFn,
+    };
+  }
+
+  const varName = toSchemaVariableName(pgSchema);
+  return {
+    tableFn: `${varName}.table`,
+    enumFn: `${varName}.enum`,
+    coreImport: "pgSchema",
+    enumImport: null,
+    declaration: exportConst(varName, fnCall("pgSchema", [quoted(pgSchema)])),
+  };
+}
 
 export function generateSchema(
   tables: TableDef[],
   enums: EnumDef[],
   dialect: DialectConfig,
   shouldPluralize = true,
+  pgSchema?: string,
 ): string {
+  const target = resolveSchemaTarget(dialect, pgSchema);
   const sections: string[] = [];
 
-  sections.push(generateImports(tables, enums, dialect));
+  sections.push(generateImports(tables, enums, dialect, target));
 
-  if (dialect.enumFn) {
+  if (target.declaration) {
+    sections.push(target.declaration);
+  }
+
+  if (target.enumFn) {
     for (const enumDef of enums) {
-      sections.push(generateEnumDeclaration(enumDef, dialect.enumFn));
+      sections.push(generateEnumDeclaration(enumDef, target.enumFn));
     }
   }
 
   for (const table of tables) {
-    sections.push(generateTableDeclaration(table, dialect, shouldPluralize));
+    sections.push(generateTableDeclaration(table, dialect, target.tableFn, shouldPluralize));
   }
 
   return `${sections.join("\n\n")}\n`;
 }
 
-function generateImports(tables: TableDef[], enums: EnumDef[], dialect: DialectConfig): string {
-  const coreImports = collectCoreImports(tables, enums, dialect);
+function generateImports(
+  tables: TableDef[],
+  enums: EnumDef[],
+  dialect: DialectConfig,
+  target: SchemaTarget,
+): string {
+  const coreImports = collectCoreImports(tables, enums, dialect, target);
   const lines: string[] = [];
 
   lines.push(formatCode(importDecl(coreImports, dialect.coreModule)));
@@ -76,10 +115,11 @@ function collectCoreImports(
   tables: TableDef[],
   enums: EnumDef[],
   dialect: DialectConfig,
+  target: SchemaTarget,
 ): string[] {
   const imports = new Set<string>();
 
-  imports.add(dialect.tableFn);
+  imports.add(target.coreImport);
 
   for (const table of tables) {
     if (table.primaryKey.isComposite) {
@@ -116,8 +156,8 @@ function collectCoreImports(
     }
   }
 
-  if (enums.length > 0 && dialect.enumFn) {
-    imports.add(dialect.enumFn);
+  if (enums.length > 0 && target.enumImport) {
+    imports.add(target.enumImport);
   }
 
   return [...imports].sort();
@@ -222,6 +262,7 @@ function generateEnumDeclaration(enumDef: EnumDef, enumFn: string): string {
 function generateTableDeclaration(
   table: TableDef,
   dialect: DialectConfig,
+  tableFn: string,
   shouldPluralize: boolean,
 ): string {
   const varName = toTableVariableName(table.name, shouldPluralize);
@@ -229,10 +270,10 @@ function generateTableDeclaration(
   const extras = generateTableExtras(table, shouldPluralize);
 
   if (extras.length > 0) {
-    return generateTableWithExtras(table, varName, columns, extras, dialect);
+    return generateTableWithExtras(table, varName, columns, extras, tableFn);
   }
 
-  return exportConst(varName, fnCall(dialect.tableFn, [quoted(table.tableName), columns]));
+  return exportConst(varName, fnCall(tableFn, [quoted(table.tableName), columns]));
 }
 
 function generateTableWithExtras(
@@ -240,10 +281,10 @@ function generateTableWithExtras(
   varName: string,
   columns: string,
   extras: string[],
-  dialect: DialectConfig,
+  tableFn: string,
 ): string {
   return [
-    `export const ${varName} = ${dialect.tableFn}(`,
+    `export const ${varName} = ${tableFn}(`,
     `  ${quoted(table.tableName)},`,
     `${columns
       .split("\n")
