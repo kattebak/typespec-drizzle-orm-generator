@@ -1,9 +1,10 @@
 import type { EmitContext } from "@typespec/compiler";
-import { emitFile, resolvePath } from "@typespec/compiler";
+import { emitFile, NoTarget, resolvePath } from "@typespec/compiler";
 import { assemblePackage } from "./assembler.js";
 import type { Dialect } from "./generators/dialect.js";
 import { buildIR } from "./ir/builder.js";
 import { buildRemitIR } from "./ir/remit-builder.js";
+import { $lib } from "./lib.js";
 
 /**
  * Binds every decorator exported from this module into the `Drizzle` TypeSpec
@@ -73,6 +74,11 @@ export interface EmitterOptions {
    * front-end. Enable when the store generates its own base36 ids.
    */
   "id-default"?: boolean;
+  /**
+   * Emit every table and enum into this Postgres schema through `pgSchema()`
+   * instead of the default `public` schema. Honoured by the pg dialect only.
+   */
+  "pg-schema"?: string;
 }
 
 export async function $onEmit(context: EmitContext<EmitterOptions>): Promise<void> {
@@ -85,12 +91,14 @@ export async function $onEmit(context: EmitContext<EmitterOptions>): Promise<voi
       ? buildRemitIR(context.program, { foreignKeys, idDefault })
       : buildIR(context.program);
 
+  const dialect = context.options.dialect ?? "pg";
   const config = {
     packageName: context.options["package-name"] ?? "drizzle-schema",
     packageVersion: context.options["package-version"] ?? "0.0.1",
-    dialect: context.options.dialect ?? "pg",
+    dialect,
     pluralize: context.options.pluralize ?? true,
     schemaOnly: context.options["schema-only"] ?? false,
+    pgSchema: resolvePgSchema(context, dialect),
   };
 
   const files = assemblePackage(tables, enums, config);
@@ -101,4 +109,32 @@ export async function $onEmit(context: EmitContext<EmitterOptions>): Promise<voi
       content,
     });
   }
+}
+
+function resolvePgSchema(
+  context: EmitContext<EmitterOptions>,
+  dialect: Dialect,
+): string | undefined {
+  const schema = context.options["pg-schema"];
+  if (schema === undefined) return undefined;
+
+  if (dialect !== "pg") {
+    context.program.reportDiagnostic(
+      $lib.createDiagnostic({
+        code: "pg-schema-requires-pg",
+        target: NoTarget,
+        format: { schema },
+      }),
+    );
+    return undefined;
+  }
+
+  if (schema === "public") {
+    context.program.reportDiagnostic(
+      $lib.createDiagnostic({ code: "pg-schema-public", target: NoTarget }),
+    );
+    return undefined;
+  }
+
+  return schema;
 }

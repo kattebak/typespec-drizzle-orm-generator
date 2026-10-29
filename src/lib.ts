@@ -27,6 +27,19 @@ export const $lib = createTypeSpecLibrary({
         default: paramMessage`The default of property "${"property"}" holds ${"element"}, which no column default can hold. Use string, number, boolean or enum elements, or remove the default.`,
       },
     },
+    "pg-schema-requires-pg": {
+      severity: "error",
+      messages: {
+        default: paramMessage`The pg-schema option "${"schema"}" applies to the pg dialect only. Remove pg-schema or set dialect to pg.`,
+      },
+    },
+    "pg-schema-public": {
+      severity: "error",
+      messages: {
+        default:
+          'pg-schema "public" is the default schema, which drizzle\'s pgSchema() rejects. Remove pg-schema to emit tables in public.',
+      },
+    },
   },
   state: {
     table: { description: "State for @table decorator" },

@@ -392,6 +392,33 @@ options:
 
 `relations.ts`, `describe.ts`, and the `DrizzleClient` type use the Drizzle v2 relational API (`defineRelations`, `PgAsyncDatabase`). Set `schema-only: true` to emit just the table schema (`schema.ts` + the `base36Uuid` / nullable custom types), which stays compatible with Drizzle v1 consumers that manage relations themselves. The generated `package.json` then declares a `drizzle-orm` peer range of `>=0.30.0`.
 
+## Postgres schema
+
+Set `pg-schema` to emit every table and enum into a named Postgres schema instead of `public`, for a database role that may not create objects in `public`:
+
+```yaml
+options:
+  "@kattebak/typespec-drizzle-orm-generator":
+    dialect: pg
+    pg-schema: markets
+```
+
+`schema.ts` then declares the schema and builds every table and enum from it. The variable is the camel-cased schema name plus `Schema`:
+
+```typescript
+import { pgSchema, text } from "drizzle-orm/pg-core";
+
+export const marketsSchema = pgSchema("markets");
+
+export const venueEnum = marketsSchema.enum("venue", ["spot", "futures"]);
+
+export const products = marketsSchema.table("products", {
+  name: text("name").notNull(),
+});
+```
+
+`drizzle-kit export` prints `CREATE SCHEMA "markets"` and schema-qualified tables, types and foreign keys. The option applies to the `pg` dialect only: with `sqlite` it is a compile error, and so is `public`, which `pgSchema()` rejects. Without it, the output is unchanged.
+
 ## Getting SQL DDL
 
 The emitter writes TypeScript only. To get SQL, run `drizzle-kit export` over the generated `schema.ts`; it needs no database and no migration folder:

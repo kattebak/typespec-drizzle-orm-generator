@@ -14,6 +14,7 @@ export interface EmitterConfig {
   dialect: Dialect;
   pluralize: boolean;
   schemaOnly?: boolean;
+  pgSchema?: string;
 }
 
 /**
@@ -35,7 +36,7 @@ export function assemblePackage(
     ["package.json", generatePackageJson(config)],
     ["tsconfig.json", generateTsConfig()],
     ["types.ts", generateTypes(dialect, schemaOnly)],
-    ["schema.ts", generateSchema(tables, enums, dialect, config.pluralize)],
+    ["schema.ts", generateSchema(tables, enums, dialect, config.pluralize, config.pgSchema)],
     ["index.ts", generateIndex(schemaOnly)],
   ]);
 

@@ -1,6 +1,12 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { pluralize, toCamelCase, toSnakeCase, toTableVariableName } from "./naming.ts";
+import {
+  pluralize,
+  toCamelCase,
+  toSchemaVariableName,
+  toSnakeCase,
+  toTableVariableName,
+} from "./naming.ts";
 
 describe("toSnakeCase", () => {
   it("converts camelCase to snake_case", () => {
@@ -52,5 +58,20 @@ describe("toTableVariableName", () => {
 
   it("keeps the singular form when pluralization is disabled", () => {
     assert.equal(toTableVariableName("BookGenre", false), "bookGenre");
+  });
+});
+
+describe("toSchemaVariableName", () => {
+  it("appends Schema to a single-word name", () => {
+    assert.equal(toSchemaVariableName("markets"), "marketsSchema");
+  });
+
+  it("camel-cases a snake_case or kebab-case name", () => {
+    assert.equal(toSchemaVariableName("market_data"), "marketDataSchema");
+    assert.equal(toSchemaVariableName("market-data"), "marketDataSchema");
+  });
+
+  it("prefixes a name that starts with a digit", () => {
+    assert.equal(toSchemaVariableName("2024_archive"), "_2024ArchiveSchema");
   });
 });
