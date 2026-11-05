@@ -12,7 +12,13 @@ export const $lib = createTypeSpecLibrary({
     "unknown-uuid-encoding": {
       severity: "error",
       messages: {
-        default: paramMessage`@uuid encoding "${"encoding"}" is not one of "base36", "canonical" or "raw". The column falls back to "canonical".`,
+        default: paramMessage`@uuid encoding "${"encoding"}" is not one of "base36", "canonical", "raw" or "rfc4122". The column falls back to "canonical".`,
+      },
+    },
+    "native-uuid-auto-generate": {
+      severity: "error",
+      messages: {
+        default: `@uuid("rfc4122") generates no id. A native uuid column gets no generated default, so the application must set the value. Drop the autoGenerate argument.`,
       },
     },
     "index-def-unknown-column": {

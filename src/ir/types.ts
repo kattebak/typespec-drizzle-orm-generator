@@ -10,14 +10,24 @@ export interface ProgramStateAccess {
   reportDiagnostic(diagnostic: Diagnostic): void;
 }
 
-/** UUID encoding options for @uuid decorator */
+/** UUID encodings the generated codec converts between base36 and storage */
 export type UuidEncoding = "base36" | "canonical" | "raw";
 
 /** Storage encoding a `@uuid` column uses when the decorator names none */
 export const DEFAULT_UUID_ENCODING: UuidEncoding = "canonical";
 
+/** Encoding that stores an RFC 4122 uuid string and converts nothing */
+export const NATIVE_UUID_ENCODING = "rfc4122";
+
+/** Every encoding `@uuid` accepts */
+export type UuidDecoratorEncoding = UuidEncoding | typeof NATIVE_UUID_ENCODING;
+
 export function isUuidEncoding(value: unknown): value is UuidEncoding {
   return value === "base36" || value === "canonical" || value === "raw";
+}
+
+export function isNativeUuidEncoding(value: unknown): value is typeof NATIVE_UUID_ENCODING {
+  return value === NATIVE_UUID_ENCODING;
 }
 
 /** Resolved column type after applying all decorators */
@@ -33,6 +43,7 @@ export type FieldType =
   | { kind: "jsonb" }
   | { kind: "blob" }
   | { kind: "uuid"; encoding: UuidEncoding }
+  | { kind: "nativeUuid" }
   | { kind: "enum"; enumName: string; values: string[] }
   | { kind: "textEnum"; values: string[] };
 

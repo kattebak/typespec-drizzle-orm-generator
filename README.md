@@ -76,7 +76,7 @@ The emitter produces 6 files as a ready-to-use npm package:
 | `schema.ts`    | Table definitions (`pgTable`/`sqliteTable`), enums, constraints        |
 | `relations.ts` | `defineRelations()` with `through()` for many-to-many                |
 | `describe.ts`  | One typed query function per entity (fetch by PK with all relations) |
-| `types.ts`     | UUID custom types (one per encoding), `DrizzleClient` type alias     |
+| `types.ts`     | UUID custom types (one per codec encoding), `DrizzleClient` type alias |
 | `index.ts`     | Barrel re-exports                                                    |
 | `package.json` | Package metadata with `drizzle-orm` dependency                       |
 
@@ -409,19 +409,22 @@ Enums, indexes, partial indexes (`WHERE`) and array defaults come through. For m
 
 ## UUID columns
 
-`@uuid` marks a column the application reads and writes as a 25-character base36 string. The `encoding` argument picks how that id is stored, and only the stored bytes change — every encoding round-trips to the same base36 string.
+`@uuid` marks a column holding a UUID. The `encoding` argument picks how the id is stored and what the application reads and writes.
 
-| `encoding`  | Stored form                     | PostgreSQL | SQLite | Bytes per value (PG / SQLite) |
-| ----------- | ------------------------------- | ---------- | ------ | ----------------------------- |
-| `canonical` | 36-character hyphenated UUID    | `uuid`     | `text` | 16 / 36                       |
-| `base36`    | the 25-character base36 string  | `text`     | `text` | 25 / 25                       |
-| `raw`       | the UUID's 16 bytes             | `uuid`     | `blob` | 16 / 16                       |
+| `encoding`  | Stored form                     | Application type           | PostgreSQL | SQLite | Bytes per value (PG / SQLite) |
+| ----------- | ------------------------------- | -------------------------- | ---------- | ------ | ----------------------------- |
+| `canonical` | 36-character hyphenated UUID    | 25-character base36 string | `uuid`     | `text` | 16 / 36                       |
+| `base36`    | the 25-character base36 string  | 25-character base36 string | `text`     | `text` | 25 / 25                       |
+| `raw`       | the UUID's 16 bytes             | 25-character base36 string | `uuid`     | `blob` | 16 / 16                       |
+| `rfc4122`   | 36-character hyphenated UUID    | the same 36-character UUID | `uuid`     | `text` | 16 / 36                       |
 
-`canonical` is the default when the decorator names no encoding. PostgreSQL stores its native `uuid` type as 16 bytes, so `canonical` and `raw` are the same column there and only the SQLite side has a compact form to choose. SQLite has no native UUID type; `raw` is where a large table wins, at 16 bytes against 36.
+`canonical` is the default when the decorator names no encoding. The first three store the same id three ways and every one of them round-trips to the same base36 string. PostgreSQL stores its native `uuid` type as 16 bytes, so `canonical` and `raw` are the same column there and only the SQLite side has a compact form to choose. SQLite has no native UUID type; `raw` is where a large table wins, at 16 bytes against 36.
 
-Each encoding is backed by its own generated custom type — `canonicalUuid`, `base36Uuid`, `rawUuid` — exported from `types.ts` alongside `generateBase36Id()`, which mints a fresh base36 id for any of them. The conversion is emitted into the package, so a generated package has no runtime dependencies.
+Those three are backed by a generated custom type each — `canonicalUuid`, `base36Uuid`, `rawUuid` — exported from `types.ts` alongside `generateBase36Id()`, which mints a fresh base36 id for any of them. The conversion is emitted into the package, so a generated package has no runtime dependencies.
 
 `base36` stores the id verbatim and converts nothing. `canonical` and `raw` convert every value in both directions, at about a microsecond each: a query passing 25,000 ids spends roughly 25 ms encoding them and 25 ms decoding the result.
+
+`rfc4122` carries no codec at all. The column is the native PostgreSQL `uuid` type (`text` on SQLite, which has none) and the 36-character string passes through unconverted, so an application minting ids with `crypto.randomUUID()` stores what it generated. The column gets no generated default: the application sets the value, and `autoGenerate` on an `rfc4122` column is an error.
 
 ```typespec
 @pk @uuid("raw", true)
@@ -429,6 +432,9 @@ sessionId: string;
 
 @uuid("base36") @references(Account.accountId)
 accountId: string;
+
+@pk @uuid("rfc4122")
+webhookId: string;
 ```
 
 ## Type mapping (PostgreSQL)
@@ -447,6 +453,7 @@ accountId: string;
 | `string` + `@uuid("canonical")` | `canonicalUuid()`                   | `uuid`                    |
 | `string` + `@uuid("base36")`    | `base36Uuid()`                      | `text`                    |
 | `string` + `@uuid("raw")`       | `rawUuid()`                         | `uuid`                    |
+| `string` + `@uuid("rfc4122")`   | `uuid()`                            | `uuid`                    |
 | TypeSpec `enum`                 | `pgEnum()`                          | `CREATE TYPE ... AS ENUM` |
 
 ## Full example
