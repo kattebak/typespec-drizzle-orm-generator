@@ -20,6 +20,7 @@ import type {
   ReferentialAction,
   TableDef,
 } from "./types.js";
+import { readUuidField } from "./uuid-field.js";
 import { isVisibilityCopy } from "./visibility-copy.js";
 
 /**
@@ -36,6 +37,10 @@ import { isVisibilityCopy } from "./visibility-copy.js";
  *
  * Indexes come from two places. `@index` access patterns become secondary indexes, and
  * `@indexDef` adds indexes that exist in SQL only — see `readIndexDefs`.
+ *
+ * Column types come from the property's TypeSpec type, except where `@Drizzle.uuid`
+ * names a uuid encoding — this library's own decorator, read from its own state by
+ * both front-ends, so a `@uuid` column is identical under either.
  *
  * Relations are derived from ElectroDB collections: a `collection` shared by ≥2 entities
  * on indexes that share the same pk-attribute NAME means that named attribute is the
@@ -107,7 +112,7 @@ export function buildRemitIR(
 
     const fields: FieldDef[] = [];
     for (const [propName, prop] of model.properties) {
-      const resolved = resolveFieldType(prop);
+      const resolved = resolveFieldType(program, prop);
       const columnName = readLabel(prop) ?? toSnakeCase(propName);
       const field: FieldDef = {
         name: propName,
@@ -117,6 +122,8 @@ export function buildRemitIR(
         createdAt: false,
         updatedAt: false,
       };
+
+      if (resolved.uuid) field.uuid = resolved.uuid;
 
       if (idDefault && propName === singlePkColumn && resolved.type.kind === "text") {
         field.autoGenerateId = true;
@@ -280,9 +287,13 @@ function tupleNames(tuple: Tuple): string[] {
 
 interface ResolvedField {
   type: FieldType;
+  uuid?: FieldDef["uuid"];
 }
 
-function resolveFieldType(prop: ModelProperty): ResolvedField {
+function resolveFieldType(program: Program, prop: ModelProperty): ResolvedField {
+  const uuid = readUuidField(program, prop);
+  if (uuid) return uuid;
+
   const type = prop.type;
 
   if (type.kind === "Scalar") return { type: resolveScalarType(type) };

@@ -1044,3 +1044,49 @@ describe("schema generator: uuid encodings and blob columns", () => {
     assert.ok(output.includes('payload: bytea("payload").notNull(),'));
   });
 });
+
+describe("schema generator: native uuid columns", () => {
+  const table: TableDef = {
+    name: "Key",
+    service: "endur",
+    tableName: "keys",
+    primaryKey: { tableName: "keys", columns: ["keyId"], isComposite: false },
+    fields: [
+      {
+        name: "keyId",
+        columnName: "key_id",
+        type: { kind: "nativeUuid" },
+        nullable: false,
+        createdAt: false,
+        updatedAt: false,
+      },
+      {
+        name: "parentKeyId",
+        columnName: "parent_key_id",
+        type: { kind: "nativeUuid" },
+        nullable: true,
+        createdAt: false,
+        updatedAt: false,
+      },
+    ],
+    foreignKeys: [],
+    isJunction: false,
+    indexes: [],
+    uniqueConstraints: [],
+  };
+
+  it("declares a pg uuid column and imports uuid from pg-core", () => {
+    const output = generateSchema([table], [], pg);
+    assert.ok(output.includes('import { pgTable, uuid } from "drizzle-orm/pg-core";'));
+    assert.ok(output.includes('keyId: uuid("key_id").primaryKey(),'));
+    assert.ok(output.includes('parentKeyId: uuid("parent_key_id"),'));
+    assert.ok(!output.includes("./types.js"));
+  });
+
+  it("falls back to a text column on sqlite", () => {
+    const output = generateSchema([table], [], sqlite);
+    assert.ok(output.includes('import { sqliteTable, text } from "drizzle-orm/sqlite-core";'));
+    assert.ok(output.includes('keyId: text("key_id").primaryKey(),'));
+    assert.ok(!output.includes("./types.js"));
+  });
+});

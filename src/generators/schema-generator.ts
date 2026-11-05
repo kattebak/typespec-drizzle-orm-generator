@@ -131,6 +131,7 @@ function collectFieldImports(field: FieldDef, dialect: DialectConfig): string[] 
       case "enum":
       case "textEnum":
       case "jsonb":
+      case "nativeUuid":
         return ["text"];
       case "integer":
       case "bigint":
@@ -170,6 +171,8 @@ function collectFieldImports(field: FieldDef, dialect: DialectConfig): string[] 
       return ["bytea"];
     case "textEnum":
       return ["text"];
+    case "nativeUuid":
+      return ["uuid"];
     case "uuid":
     case "enum":
       return [];
