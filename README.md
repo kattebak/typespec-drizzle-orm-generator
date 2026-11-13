@@ -390,7 +390,7 @@ options:
 
 ## Schema-only output
 
-`relations.ts`, `describe.ts`, and the `DrizzleClient` type use the Drizzle v2 relational API (`defineRelations`, `PgAsyncDatabase`). Set `schema-only: true` to emit just the table schema (`schema.ts` + the `base36Uuid` / nullable custom types), which stays compatible with Drizzle v1 consumers that manage relations themselves. The generated `package.json` then declares a `drizzle-orm` peer range of `>=0.30.0`.
+`relations.ts`, `describe.ts`, and the `DrizzleClient` type use the Drizzle v2 relational API (`defineRelations`, `PgAsyncDatabase`). Set `schema-only: true` to emit just the table schema (`schema.ts` + the `base36Uuid` / nullable custom types), which stays compatible with Drizzle v1 consumers that manage relations themselves. The generated `package.json` then declares a `drizzle-orm` peer range of `>=0.30.0 || >=1.0.0-rc.1`, which admits the 1.0 pre-releases.
 
 ## Getting SQL DDL
 

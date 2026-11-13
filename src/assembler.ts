@@ -66,7 +66,7 @@ function generatePackageJson(config: EmitterConfig): string {
       prepare: "tsc",
     },
     peerDependencies: {
-      "drizzle-orm": config.schemaOnly ? ">=0.30.0" : ">=1.0.0-beta.1",
+      "drizzle-orm": config.schemaOnly ? ">=0.30.0 || >=1.0.0-rc.1" : ">=1.0.0-beta.1",
       typescript: ">=5.0.0",
     },
   };
