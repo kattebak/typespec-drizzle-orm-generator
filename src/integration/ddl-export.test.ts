@@ -54,11 +54,13 @@ async function exportDdl(dialect: Dialect): Promise<string> {
 
 describe("drizzle-kit export over the generated schema", () => {
   for (const dialect of ["pg", "sqlite"] as const) {
-    it(`prints tables, a partial index and an array default for ${dialect}`, async () => {
+    it(`prints tables, a partial index, an array default and object defaults for ${dialect}`, async () => {
       const ddl = await exportDdl(dialect);
       assert.match(ddl, /CREATE TABLE/);
       assert.match(ddl, /CREATE INDEX [`"]idx_orders_open[`"] ON .*WHERE .*total_cents > 0/);
       assert.match(ddl, /[`"]tags[`"] .*DEFAULT '\[\]'/);
+      assert.match(ddl, /[`"]rule[`"] .*DEFAULT '\{"version":0\}'/);
+      assert.match(ddl, /[`"]layout[`"] .*DEFAULT '\{"panes":\{"left":"list","sizes":\[1,2\]\}\}'/);
     });
   }
 });

@@ -48,7 +48,13 @@ export type FieldType =
   | { kind: "textEnum"; values: string[] };
 
 /** Literal a column default is emitted from */
-export type DefaultValue = string | number | bigint | boolean | readonly DefaultValue[];
+export type DefaultValue =
+  | string
+  | number
+  | bigint
+  | boolean
+  | readonly DefaultValue[]
+  | { readonly [key: string]: DefaultValue };
 
 /** ON DELETE / ON UPDATE referential action for a foreign key */
 export type ReferentialAction = "cascade" | "restrict" | "no action" | "set null" | "set default";

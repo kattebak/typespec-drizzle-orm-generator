@@ -401,7 +401,7 @@ npx drizzle-kit export --dialect postgresql --schema ./build/drizzle-entities/sc
 npx drizzle-kit export --dialect sqlite --schema ./build/drizzle-entities/schema.ts > ddl.sql
 ```
 
-Enums, indexes, partial indexes (`WHERE`) and array defaults come through. For migrations over an existing database, use `drizzle-kit generate`.
+Enums, indexes, partial indexes (`WHERE`) and array and object defaults come through. For migrations over an existing database, use `drizzle-kit generate`.
 
 ## Foreign keys and id defaults
 
