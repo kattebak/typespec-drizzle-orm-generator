@@ -45,6 +45,9 @@ describe("readDefaultValue over compiled TypeSpec", () => {
         nested: string[][] = #[#["x"], #[]];
         huge: int64[] = #[9007199254740993];
         records: {}[] = #[#{}];
+        rule: { version: int32 } = #{ version: 0 };
+        layout: { panes: { left: string; sizes: int32[] } } = #{ panes: #{ left: "list", sizes: #[1, 2] } };
+        unset: { value: string | null } = #{ value: null };
         plain: string;
       }
       `,
@@ -113,11 +116,23 @@ describe("readDefaultValue over compiled TypeSpec", () => {
     assert.equal(defaults.get("huge")?.kind, "unrepresentable");
   });
 
-  it("flags an array element with no literal form", () => {
-    assert.deepEqual(defaults.get("records"), {
-      kind: "unrepresentable",
-      element: "an object",
+  it("reads an array of objects", () => {
+    assert.deepEqual(defaults.get("records"), { kind: "value", value: [{}] });
+  });
+
+  it("reads an object default", () => {
+    assert.deepEqual(defaults.get("rule"), { kind: "value", value: { version: 0 } });
+  });
+
+  it("reads a nested object default", () => {
+    assert.deepEqual(defaults.get("layout"), {
+      kind: "value",
+      value: { panes: { left: "list", sizes: [1, 2] } },
     });
+  });
+
+  it("flags an object property with no literal form", () => {
+    assert.deepEqual(defaults.get("unset"), { kind: "unrepresentable", element: "null" });
   });
 
   it("has no default for a property without one", () => {

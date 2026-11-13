@@ -105,6 +105,21 @@ model Preference {
   retries: int32 = 0;
   notify: boolean = true;
   tags: string[] = #[];
+  rule: Rule = #{ version: 0 };
+  layout: Layout = #{ panes: #{ left: "list", sizes: #[1, 2] } };
+}
+
+model Rule {
+  version: int32;
+}
+
+model Layout {
+  panes: Panes;
+}
+
+model Panes {
+  left: string;
+  sizes: int32[];
 }
 
 @table("Tag", "edge")
