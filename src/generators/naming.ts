@@ -18,6 +18,19 @@ export function toTableVariableName(name: string, shouldPluralize = true): strin
 }
 
 /**
+ * Convert a Postgres schema name to the variable that holds its `pgSchema()`.
+ * "markets" → "marketsSchema", "market_data" → "marketDataSchema"
+ */
+export function toSchemaVariableName(schemaName: string): string {
+  const [head = "", ...rest] = schemaName.split(/[^A-Za-z0-9]+/).filter(Boolean);
+  const camel = [
+    head[0]?.toLowerCase() + head.slice(1),
+    ...rest.map((part) => part[0].toUpperCase() + part.slice(1)),
+  ].join("");
+  return /^[0-9]/.test(camel) ? `_${camel}Schema` : `${camel}Schema`;
+}
+
+/**
  * Naive pluralization sufficient for the bookstore domain.
  * Handles: consonant+y → ies, s/sh/ch/x/z → es, default → s
  */
