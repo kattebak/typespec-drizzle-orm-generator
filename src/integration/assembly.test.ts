@@ -275,6 +275,6 @@ describe("schema-only assembly", () => {
   it("declares a Drizzle-v1-compatible peer range", () => {
     const pkg = schemaOnlyFiles.get("package.json");
     assert.ok(pkg);
-    assert.ok(pkg.includes('"drizzle-orm": ">=0.30.0"'));
+    assert.ok(pkg.includes('"drizzle-orm": ">=0.30.0 || >=1.0.0-rc.1"'));
   });
 });

@@ -141,4 +141,17 @@ describe("pg-schema option", () => {
     const schema = await readFile(join(outputDir, "schema.ts"), "utf8");
     assert.ok(schema.includes('= pgTable("products"'));
   });
+
+  it("reports an error for a blank schema and emits pgTable", async () => {
+    const host = await compile();
+    const outputDir = await emit(host, { "pg-schema": "  " }, "blank");
+
+    assert.deepEqual(
+      host.program.diagnostics.map((d) => [d.code, d.severity]),
+      [["@kattebak/typespec-drizzle-orm-generator/pg-schema-public", "error"]],
+    );
+    const schema = await readFile(join(outputDir, "schema.ts"), "utf8");
+    assert.ok(schema.includes('= pgTable("products"'));
+    assert.ok(!schema.includes("pgSchema"));
+  });
 });

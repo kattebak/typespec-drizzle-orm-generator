@@ -1,7 +1,7 @@
 import type { Model, ModelProperty, Program, Scalar } from "@typespec/compiler";
 import { getMaxLength } from "@typespec/compiler";
 import { toSnakeCase } from "../generators/naming.js";
-import { $lib, StateKeys } from "../lib.js";
+import { StateKeys } from "../lib.js";
 import { readColumnDefault } from "./default-value.js";
 import { readIndexDefs, reportUnclaimedIndexDefs, toModelProperties } from "./index-def.js";
 import type {
@@ -13,9 +13,9 @@ import type {
   ProgramStateAccess,
   TableDef,
   UniqueConstraintDef,
-  UuidEncoding,
 } from "./types.js";
-import { DEFAULT_UUID_ENCODING, isUuidEncoding } from "./types.js";
+import type { UuidField } from "./uuid-field.js";
+import { readUuidField } from "./uuid-field.js";
 import { isVisibilityCopy } from "./visibility-copy.js";
 
 export type { ProgramStateAccess } from "./types.js";
@@ -27,29 +27,6 @@ interface TableMeta {
 
 interface PrimaryKeyMeta {
   tableName: string;
-}
-
-interface UuidMeta {
-  encoding?: string;
-  autoGenerate: boolean;
-}
-
-function resolveUuidEncoding(
-  meta: UuidMeta,
-  prop: ModelProperty,
-  program: ProgramStateAccess,
-): UuidEncoding {
-  if (meta.encoding === undefined) return DEFAULT_UUID_ENCODING;
-  if (isUuidEncoding(meta.encoding)) return meta.encoding;
-
-  program.reportDiagnostic(
-    $lib.createDiagnostic({
-      code: "unknown-uuid-encoding",
-      target: prop,
-      format: { encoding: meta.encoding },
-    }),
-  );
-  return DEFAULT_UUID_ENCODING;
 }
 
 interface CompositeUniqueMeta {
@@ -96,7 +73,6 @@ export function buildIR(program: ProgramStateAccess): {
   const pkFieldState = program.stateSet(StateKeys.pk);
   const referencesState = program.stateMap(StateKeys.references);
   const junctionState = program.stateSet(StateKeys.junction);
-  const uuidState = program.stateMap(StateKeys.uuid);
   const createdAtState = program.stateSet(StateKeys.createdAt);
   const updatedAtState = program.stateSet(StateKeys.updatedAt);
   const uniqueState = program.stateSet(StateKeys.unique);
@@ -130,7 +106,7 @@ export function buildIR(program: ProgramStateAccess): {
         | { ref: ModelProperty; onDelete?: "CASCADE" | "RESTRICT" }
         | undefined;
       const refTarget = refEntry?.ref;
-      const uuidMeta = uuidState.get(modelProp) as UuidMeta | undefined;
+      const uuidField = readUuidField(program, modelProp);
       const isCreatedAt = createdAtState.has(modelProp);
       const isUpdatedAt = updatedAtState.has(modelProp);
       const isUnique = uniqueState.has(modelProp);
@@ -139,7 +115,7 @@ export function buildIR(program: ProgramStateAccess): {
       const maxVal = maxValueState.get(modelProp) as number | undefined;
       const vis = visibilityState.get(modelProp) as string | undefined;
 
-      const fieldType = resolveFieldType(modelProp, uuidMeta, program);
+      const fieldType = resolveFieldType(modelProp, uuidField, program);
       const columnName = toSnakeCase(propName);
 
       // Collect enum definitions
@@ -161,11 +137,8 @@ export function buildIR(program: ProgramStateAccess): {
         updatedAt: isUpdatedAt,
       };
 
-      if (uuidMeta && fieldType.kind === "uuid") {
-        field.uuid = {
-          encoding: fieldType.encoding,
-          autoGenerate: uuidMeta.autoGenerate,
-        };
+      if (uuidField?.uuid) {
+        field.uuid = uuidField.uuid;
       }
 
       if (refTarget) {
@@ -255,12 +228,10 @@ export function buildIR(program: ProgramStateAccess): {
 
 function resolveFieldType(
   prop: ModelProperty,
-  uuidMeta: UuidMeta | undefined,
+  uuidField: UuidField | undefined,
   program: ProgramStateAccess,
 ): FieldType {
-  if (uuidMeta) {
-    return { kind: "uuid", encoding: resolveUuidEncoding(uuidMeta, prop, program) };
-  }
+  if (uuidField) return uuidField.type;
 
   const type = prop.type;
   if (type.kind === "Scalar") {

@@ -23,14 +23,17 @@ extern dec references(
 );
 extern dec junction(target: Model);
 /**
- * Marks a column as a UUID the application reads and writes as a 25-character
- * base36 string. `encoding` picks the stored form: `canonical` (the default,
- * 36-character hyphenated), `base36` (the 25-character string as written), or
- * `raw` (16 bytes).
+ * Marks a column as a UUID. `encoding` picks the stored form and what the
+ * application reads and writes.
+ *
+ * `canonical` (the default, 36-character hyphenated), `base36` (the 25-character
+ * string as written) and `raw` (16 bytes) read and write a 25-character base36
+ * string through a generated codec. `rfc4122` reads and writes the 36-character
+ * UUID string itself, converts nothing, and gets no generated default.
  */
 extern dec uuid(
   target: ModelProperty,
-  encoding?: valueof "base36" | "canonical" | "raw",
+  encoding?: valueof "base36" | "canonical" | "raw" | "rfc4122",
   autoGenerate?: valueof boolean
 );
 extern dec createdAt(target: ModelProperty);

@@ -1398,6 +1398,29 @@ describe("@uuid encoding resolution", () => {
       "@kattebak/typespec-drizzle-orm-generator/unknown-uuid-encoding",
     );
   });
+
+  it("resolves rfc4122 to a native uuid column that carries no codec", () => {
+    const { field, diagnostics } = buildUuidField((ctx, prop) => {
+      $uuid(ctx, prop as unknown as ModelProperty, "rfc4122");
+    });
+    assert.deepEqual(field.type, { kind: "nativeUuid" });
+    assert.equal(field.uuid, undefined);
+    assert.equal(field.autoGenerateId, undefined);
+    assert.equal(diagnostics.length, 0);
+  });
+
+  it("reports autoGenerate on an rfc4122 column", () => {
+    const { field, diagnostics } = buildUuidField((ctx, prop) => {
+      $uuid(ctx, prop as unknown as ModelProperty, "rfc4122", true);
+    });
+    assert.deepEqual(field.type, { kind: "nativeUuid" });
+    assert.equal(field.uuid, undefined);
+    assert.equal(diagnostics.length, 1);
+    assert.equal(
+      diagnostics[0].code,
+      "@kattebak/typespec-drizzle-orm-generator/native-uuid-auto-generate",
+    );
+  });
 });
 
 describe("resolution: bytes scalar", () => {

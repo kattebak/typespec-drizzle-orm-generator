@@ -129,7 +129,7 @@ function resolvePgSchema(
     return undefined;
   }
 
-  if (schema === "public") {
+  if (schema.trim() === "" || schema === "public") {
     context.program.reportDiagnostic(
       $lib.createDiagnostic({ code: "pg-schema-public", target: NoTarget }),
     );

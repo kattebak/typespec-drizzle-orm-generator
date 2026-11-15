@@ -167,6 +167,8 @@ function pgDialect(): DialectConfig {
           return fnCall("bytea", [col]);
         case "uuid":
           return fnCall(uuidTypeName(field.type.encoding), [col]);
+        case "nativeUuid":
+          return fnCall("uuid", [col]);
         case "enum":
           return fnCall(field.type.enumName, [col]);
         case "textEnum":
@@ -278,6 +280,8 @@ function sqliteDialect(): DialectConfig {
           ])}.$type<Uint8Array>()`;
         case "uuid":
           return fnCall(uuidTypeName(field.type.encoding), [col]);
+        case "nativeUuid":
+          return fnCall("text", [col]);
         case "enum":
           return fnCall("text", [
             col,

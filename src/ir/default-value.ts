@@ -1,4 +1,4 @@
-import type { ArrayValue, EnumMember, ModelProperty, Value } from "@typespec/compiler";
+import type { ArrayValue, EnumMember, ModelProperty, ObjectValue, Value } from "@typespec/compiler";
 import { $lib } from "../lib.js";
 import type { DefaultValue, ProgramStateAccess } from "./types.js";
 
@@ -65,30 +65,43 @@ function fromValue(value: Value): DefaultRead {
       return { kind: "value", value: fromEnumMember(value.value) };
     case "ArrayValue":
       return fromArrayValue(value);
+    case "ObjectValue":
+      return fromObjectValue(value);
     default:
       return none;
   }
 }
 
 // Drizzle takes a JSON column's default as the JS value it serializes, so every
-// element has to survive JSON.stringify: a bigint throws there, and an object,
-// null or scalar constructor has no DefaultValue form.
+// element has to survive JSON.stringify: a bigint throws there, and null or a
+// scalar constructor has no DefaultValue form.
 function fromArrayValue(array: ArrayValue): DefaultRead {
   const values: DefaultValue[] = [];
   for (const element of array.values) {
-    const read = fromArrayElement(element);
+    const read = fromJsonElement(element);
     if (read.kind !== "value") return read;
     values.push(read.value);
   }
   return { kind: "value", value: values };
 }
 
-function fromArrayElement(element: Value): DefaultRead {
+function fromObjectValue(object: ObjectValue): DefaultRead {
+  const entries: [string, DefaultValue][] = [];
+  for (const [name, property] of object.properties) {
+    const read = fromJsonElement(property.value);
+    if (read.kind !== "value") return read;
+    entries.push([name, read.value]);
+  }
+  return { kind: "value", value: Object.fromEntries(entries) };
+}
+
+function fromJsonElement(element: Value): DefaultRead {
   switch (element.valueKind) {
     case "StringValue":
     case "BooleanValue":
     case "EnumValue":
     case "ArrayValue":
+    case "ObjectValue":
       return fromValue(element);
     case "NumericValue": {
       const numeric = element.value.asNumber();
@@ -105,8 +118,6 @@ function fromArrayElement(element: Value): DefaultRead {
 
 function describeElement(element: Value): string {
   switch (element.valueKind) {
-    case "ObjectValue":
-      return "an object";
     case "NullValue":
       return "null";
     default:

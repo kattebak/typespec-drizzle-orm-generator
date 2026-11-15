@@ -30,7 +30,7 @@
   },
   "peerDependencies": {
     "@typespec/compiler": ">=1.0.0",
-    "drizzle-orm": ">=0.30.0"
+    "drizzle-orm": ">=0.30.0 || >=1.0.0-rc.1 <2.0.0"
   },
   "peerDependenciesMeta": {
     "drizzle-orm": {
